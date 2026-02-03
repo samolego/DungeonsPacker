@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "org.samo_lego.dungeons_exporter.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"WorldMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
