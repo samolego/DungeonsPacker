@@ -1,19 +1,22 @@
 package org.samo_lego.dungeons_packer.lovika;
 
-import it.unimi.dsi.fastutil.Pair;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.Vec3i;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import static org.samo_lego.dungeons_packer.DungeonsPacker.GSON;
-
 public record ObjectGroup(Set<TileCornerBlockEntity> objects) {
+    private static final Gson GSON = new GsonBuilder()
+        .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
+        .setPrettyPrinting()
+        .create();
+
     public ObjectGroup {
         if (objects == null) {
             objects = new HashSet<>();

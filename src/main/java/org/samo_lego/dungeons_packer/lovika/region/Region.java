@@ -1,5 +1,6 @@
 package org.samo_lego.dungeons_packer.lovika.region;
 
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.Vec3i;
 import org.samo_lego.dungeons_packer.lovika.Door;
 

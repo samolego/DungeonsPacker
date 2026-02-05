@@ -1,5 +1,6 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
+import com.google.gson.annotations.SerializedName;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -21,10 +22,10 @@ public record Tile(
         String id,
         BlockPos pos,
         Vec3i size,
-        String blocks, // todo: change this
-        String regionPlane,
-        String heightPlane,
-        String regionYPlane,
+        String blocks,
+        @SerializedName("region-plane") String regionPlane,
+        @SerializedName("height-plane") String heightPlane,
+        @SerializedName("region-y-plane") String regionYPlane,
         List<Door> doors,
         List<Region> regions
 ) {
@@ -130,6 +131,6 @@ public record Tile(
     }
 
     private static String posToStr(Vec3i pos) {
-        return pos.toShortString().replace( ", ", "_");
+        return String.format("x%d_y%d_z%d", pos.getX(), pos.getY(), pos.getZ());
     }
 }
