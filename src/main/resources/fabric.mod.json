@@ -16,10 +16,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-          "org.samo_lego.dungeons_exporter.DungeonsPacker"
+          "org.samo_lego.dungeons_packer.DungeonsPacker"
 		],
 		"client": [
-			"org.samo_lego.dungeons_exporter.DungeonsExporterClient"
+			"org.samo_lego.dungeons_packer.client.DungeonsPackerClient"
 		]
 	},
 	"mixins": [

@@ -6,10 +6,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.storage.LevelStorageSource.LevelStorageAccess;
 import net.minecraft.world.level.storage.ServerLevelData;
 import org.jspecify.annotations.Nullable;
+import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.tiles.ITileListener;
 import org.samo_lego.dungeons_packer.lovika.tiles.TileListener;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,7 +24,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 @Mixin(ServerLevel.class)
-public class WorldMixin implements ITileListener {
+public class ServerLevelMixin implements ITileListener {
     @Unique
     private TileListener tileListener;
 
@@ -49,7 +51,7 @@ public class WorldMixin implements ITileListener {
     }
 
     @Override
-    public TileListener dungeons_exporter$getTileListener() {
+    public TileListener dungeons_packer$getTileListener() {
         return this.tileListener;
     }
 }

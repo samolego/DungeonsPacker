@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "dungeons_packer:block/tile_corner"
+  }
+}

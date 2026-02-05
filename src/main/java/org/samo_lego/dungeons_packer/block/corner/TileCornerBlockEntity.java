@@ -7,6 +7,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BoundingBoxRenderable;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,8 +34,9 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
     public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
         super.preRemoveSideEffects(pos, state);
         // Notify tile listener
-        var tileListener = ((ITileListener) this.level).dungeons_exporter$getTileListener();
+        var tileListener = ((ITileListener) this.level).dungeons_packer$getTileListener();
         tileListener.onCornerRemoved(this);
+        tileListener.objectGroup.objects().remove(this);
     }
 
     @Override
@@ -73,36 +76,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
         this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
     }
 
-    public Optional<Tile> toDungeonTile() {
-        if (this.otherCorner == null) {
-            DungeonsPacker.LOGGER.warn("Cannot convert TileCornerBlockEntity to Tile without matching corner set.");
-            return Optional.empty();
-        }
 
-        BlockPos min = new BlockPos(
-                Math.min(this.getBlockPos().getX(), this.otherCorner.getX()),
-                Math.min(this.getBlockPos().getY(), this.otherCorner.getY()),
-                Math.min(this.getBlockPos().getZ(), this.otherCorner.getZ())
-        );
-
-        BlockPos max = new BlockPos(
-                Math.max(this.getBlockPos().getX(), this.otherCorner.getX()),
-                Math.max(this.getBlockPos().getY(), this.otherCorner.getY()),
-                Math.max(this.getBlockPos().getZ(), this.otherCorner.getZ())
-        );
-
-        return Optional.of(new Tile(
-                "",
-                min,
-                max.subtract(min).offset(1, 1, 1),
-                "",
-                "",
-                "",
-                "",
-                null,
-                null
-        ));
-    }
 
     public Optional<TileCornerBlockEntity> getMatchingCorner() {
         if (this.otherCorner == null) {
@@ -113,10 +87,15 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
 
     @Override
     public Mode renderMode() {
-        if (this.otherCorner == null || this.otherCorner.compareTo(this.getBlockPos()) >= 0) {
+        if (this.otherCorner == null || !this.isMainCorner()) {
             return Mode.NONE;
         }
         return Mode.BOX;
+    }
+
+    public boolean isMainCorner() {
+        if (this.otherCorner == null) return false;
+        return this.otherCorner.compareTo(this.getBlockPos()) < 0;
     }
 
     @Override
@@ -166,5 +145,13 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
                 Math.abs(pos.getY()),
                 Math.abs(pos.getZ())
         );
+    }
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel && this.isMainCorner()) {
+            ((ITileListener) level).dungeons_packer$getTileListener().objectGroup.objects().add(this);
+        }
     }
 }

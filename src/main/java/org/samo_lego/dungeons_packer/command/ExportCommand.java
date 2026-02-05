@@ -36,9 +36,9 @@ public class ExportCommand {
     }
 
     private static boolean execute(CommandContext<CommandSourceStack> context, File outputFile) {
-        var tileListener = ((ITileListener) context.getSource().getLevel()).dungeons_exporter$getTileListener();
+        var tileListener = ((ITileListener) context.getSource().getLevel()).dungeons_packer$getTileListener();
         try {
-            tileListener.export(outputFile);
+            tileListener.export(context.getSource(), outputFile);
         } catch (IOException e) {
             DungeonsPacker.LOGGER.error("Error while creating pak file", e);
             context.getSource().sendFailure(

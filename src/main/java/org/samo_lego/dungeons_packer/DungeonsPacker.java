@@ -12,6 +12,7 @@ import org.samo_lego.dungeons_packer.block.ConverterBlocks;
 import org.samo_lego.dungeons_packer.command.DungeonsCommand;
 import org.samo_lego.dungeons_packer.item.CreativeTabs;
 import org.samo_lego.dungeons_packer.item.ConverterItems;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 
 public class DungeonsPacker implements ModInitializer {
 	public static final String MOD_ID = "dungeons_packer";
@@ -29,5 +30,7 @@ public class DungeonsPacker implements ModInitializer {
 		ConverterBlockEntites.initialize();
 		CreativeTabs.initialize();
 		CommandRegistrationCallback.EVENT.register(DungeonsCommand::register);
+
+		BlockMap.initialize();
 	}
 }

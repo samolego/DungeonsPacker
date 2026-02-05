@@ -22,7 +22,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"dungeons-exporter" {
+		"dungeons_packer" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
