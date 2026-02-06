@@ -2,7 +2,6 @@ package org.samo_lego.dungeons_packer.block.corner;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -14,7 +13,6 @@ import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.tiles.ITileListener;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 public class TileCornerBlock extends BaseEntityBlock implements IDungeonsConvertable {
@@ -44,7 +42,7 @@ public class TileCornerBlock extends BaseEntityBlock implements IDungeonsConvert
     }
 
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, MutableBlockPos localPos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
         return BlockMap.DUNGEONS_AIR;
     }
 }

@@ -6,6 +6,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
 import org.samo_lego.japak.PakBuilder;
 import org.samo_lego.japak.structs.PakVersion;
@@ -21,6 +22,7 @@ public class TileListener {
 
     private final String levelName;
     public final ObjectGroup objectGroup;
+    private final DungeonLevel levelProperties;
 
     @Nullable
     private TileCornerBlockEntity cornerEntity;
@@ -28,6 +30,7 @@ public class TileListener {
     public TileListener(String levelName) {
         this.levelName = levelName;
         this.objectGroup = new ObjectGroup(null);
+        this.levelProperties = new DungeonLevel();
     }
 
     public void export(CommandSourceStack executioner, File outputFile) throws IOException, NoSuchAlgorithmException {
@@ -67,7 +70,7 @@ public class TileListener {
         if (this.cornerEntity == removed) {
             this.cornerEntity = null;
         } else if (this.cornerEntity != null) {
-            // We have a matching pair, connect it
+            // We have to create a new matching pair
             var matching = removed.getMatchingCorner();
             if (matching.isEmpty()) {
                 DungeonsPacker.LOGGER.warn("Corner removed without matching corner set.");

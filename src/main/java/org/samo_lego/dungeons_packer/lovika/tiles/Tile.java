@@ -94,7 +94,7 @@ public record Tile(
 
                         // Do the block conversion
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                            converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos, doors, regions);
+                            converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos.immutable(), doors, regions);
                         } else {
                             var ids = BlockMap.toDungeonBlockId(blockState);
                             if (ids.isPresent()) {

@@ -1,5 +1,6 @@
 {
   "block.dungeons_packer.tile_corner": "Tile Corner",
+  "block.dungeons_packer.end_mission": "End Mission",
   "message.conversion.block_missing": "The block %s is missing the translation to dungeons. Using air block instead.",
   "itemGroup.dungeons_packer": "Dungeons Packer"
 }

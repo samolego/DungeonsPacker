@@ -7,8 +7,8 @@ public class Door {
     private final Vec3i size;
     private final Vec3i pos;
 
-    public Door(Vec3i pos, Vec3i size, String name) {
-        this.pos = pos;
+    public Door(Vec3i relativePos, Vec3i size, String name) {
+        this.pos = relativePos;
         this.size = size;
         this.name = name;
     }

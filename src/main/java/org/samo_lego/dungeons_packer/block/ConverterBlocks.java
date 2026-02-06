@@ -27,8 +27,8 @@ public class ConverterBlocks {
 
 	public static final Block END_MISSION_BLOCK = register(
 			"end_mission",
-			Block::new,
-			BlockBehaviour.Properties.of().sound(SoundType.AMETHYST),
+			EndMissionBlock::new,
+			BlockBehaviour.Properties.of().noCollision().sound(SoundType.AMETHYST),
 			true
 	);
 

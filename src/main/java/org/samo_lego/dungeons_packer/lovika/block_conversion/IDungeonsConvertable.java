@@ -9,5 +9,5 @@ import org.samo_lego.dungeons_packer.lovika.region.Region;
 import java.util.ArrayList;
 
 public interface IDungeonsConvertable {
-    short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, MutableBlockPos localPos, ArrayList<Door> doors, ArrayList<Region> regions);
+    short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions);
 }

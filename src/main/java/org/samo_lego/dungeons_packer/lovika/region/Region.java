@@ -8,8 +8,8 @@ public class Region extends Door {
     private final String tags;
     private final Type type;
 
-    public Region(Vec3i pos, Vec3i size, String name, String tags, Type type) {
-        super(pos, size, name);
+    public Region(Vec3i relativePos, Vec3i size, String name, String tags, Type type) {
+        super(relativePos, size, name);
         this.tags = tags;
         this.type = type;
     }
@@ -17,6 +17,8 @@ public class Region extends Door {
     public enum Type {
         @SerializedName("trigger")
         TRIGGER,
+        @SerializedName("spawn")
+        SPAWN,
         @SerializedName("")
         EMPTY;
 

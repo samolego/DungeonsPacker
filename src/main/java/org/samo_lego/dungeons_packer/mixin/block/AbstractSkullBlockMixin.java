@@ -1,7 +1,6 @@
 package org.samo_lego.dungeons_packer.mixin.block;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AbstractSkullBlock;
@@ -28,14 +27,14 @@ public class AbstractSkullBlockMixin implements IDungeonsConvertable {
     private SkullBlock.Type type;
 
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, MutableBlockPos localPos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
         // We mixined into abstract skull to catch both wall skull and ground
         // placed skull block.
         if (this.type == Types.PLAYER) {
             // Register as a start point
-            var start = new Region(localPos, new Vec3i(1, 1, 1), PLAYER_START, PLAYER_START, Type.TRIGGER);
+            var start = new Region(relativePos, new Vec3i(1, 1, 1), PLAYER_START, PLAYER_START, Type.TRIGGER);
             regions.add(start);
         }
-        return BlockMap.toDungeonBlockId(Blocks.AIR.defaultBlockState()).orElseThrow();
+        return BlockMap.DUNGEONS_AIR;
     }
 }
