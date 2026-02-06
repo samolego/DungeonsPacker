@@ -15,10 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
-import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.ConverterBlockEntites;
 import org.samo_lego.dungeons_packer.lovika.tiles.ITileListener;
-import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 
 import java.util.Optional;
 

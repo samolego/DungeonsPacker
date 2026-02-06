@@ -1,5 +1,6 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -14,6 +15,7 @@ import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertabl
 import org.samo_lego.dungeons_packer.lovika.region.Region;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,7 @@ public record Tile(
         @SerializedName("region-plane") String regionPlane,
         @SerializedName("height-plane") String heightPlane,
         @SerializedName("region-y-plane") String regionYPlane,
+        @SerializedName("walkable-plane") String walkablePlane,
         List<Door> doors,
         List<Region> regions
 ) {
@@ -46,50 +49,103 @@ public record Tile(
         var doors = new ArrayList<Door>();
         var regions = new ArrayList<Region>();
 
-        final int arraySize = size.getY() * size.getZ() * size.getX();
+
+        int height = size.getY();
+        int width = size.getX();
+        int depth = size.getZ();
+
+        final int arraySize = height * depth * width;
+
+        // Dungeon block IDs
+        // We pack them either into single bytes or double bytes
+        // depending on whether we need 16 bit ids
         short[] blockIds = new short[arraySize];
         // Half the size as we merge odd and even block data into a single byte
         byte[] blockData = new byte[Math.ceilDiv(arraySize, 2)];
-
         boolean need16bitIds = false;
+
+
+        int planeSize = width * depth;
+
+        byte[] regionPlane = new byte[planeSize];
+        Arrays.fill(regionPlane, (byte) 2);
+
+        byte[] heightPlane = new byte[planeSize];
+        byte[] walkablePlane = new byte[planeSize];
+
         // This is taken from Dokucraft world converter,
         // all credit goes to them
+        // They have an awesome guide :)
         var localPos = new BlockPos.MutableBlockPos();
         var missing = new HashSet<Block>();
-        for (int y = 0; y < size.getY(); ++y) {
-            for (int z = 0; z < size.getZ(); ++z) {
-                for (int x = 0; x < size.getX(); ++x) {
-                    localPos.set(x, y, z);
-                    var absolutePos = pos.offset(localPos);
-                    var blockState = cornerBlockEntity.getLevel().getBlockState(absolutePos);
 
+        // We do +3 here as we process planes in
+        // lag-behind style
+        for (int y = 0; y < height + 3; ++y) {
+            for (int z = 0; z < depth; ++z) {
+                for (int x = 0; x < width; ++x) {
+
+                    int blockIdx = (y * depth + z) * width + x;
                     short converted = BlockMap.DUNGEONS_AIR;
+                    if (y < height) {
+                        localPos.set(x, y, z);
+                        var absolutePos = pos.offset(localPos);
+                        var blockState = cornerBlockEntity.getLevel().getBlockState(absolutePos);
 
-                    if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                        converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos, doors, regions);
-                    } else {
-                        var ids = BlockMap.toDungeonBlockId(blockState);
-                        if (ids.isPresent()) {
-                            converted = ids.get();
+                        // Do the block conversion
+                        if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
+                            converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos, doors, regions);
                         } else {
-                            missing.add(blockState.getBlock());
+                            var ids = BlockMap.toDungeonBlockId(blockState);
+                            if (ids.isPresent()) {
+                                converted = ids.get();
+                            } else {
+                                missing.add(blockState.getBlock());
+                            }
                         }
+
+                        short convBlockId = (short) (converted >> 4);
+                        byte convertedData = (byte) (converted & 0x0F);
+
+                        blockIds[blockIdx] = convBlockId;
+                        // Decide whether we need 16 bit block ids
+                        need16bitIds |= convBlockId > 0xFF;
+
+                        // Write block data
+                        var dataIdx = blockIdx / 2;
+                        byte existingData = blockData[dataIdx];
+                        existingData <<= ((blockIdx % 2) * 4);
+                        existingData |= convertedData;
+                        blockData[dataIdx] = existingData;
                     }
 
-                    int blockIdx = (y * size.getZ() + z) * size.getX() + x;
-                    short convBlockId = (short) (converted >> 4);
-                    byte convertedData = (byte) (converted & 0x0F);
+                    // Other planes
+                    int targetY = y - 3;
+                    if (targetY >= 0) {
+                        int planeIdx = z * width + x;
+                        int targetIdx = blockIdx - 3 * planeSize;
+                        short targetBlockId = blockIds[targetIdx];
 
-                    blockIds[blockIdx] = convBlockId;
-                    // Decide whether we need 16 bit block ids
-                    need16bitIds |= convBlockId > 0xFF;
+                        if (targetBlockId != BlockMap.DUNGEONS_AIR) {
+                            boolean hasCeiling = converted != BlockMap.DUNGEONS_AIR;
+                            boolean aboveT1 =(targetY + 1 >= height) || blockIds[targetIdx + planeSize] == BlockMap.DUNGEONS_AIR;
+                            boolean aboveT2 = (targetY + 2 >= height) || blockIds[targetIdx + 2 * planeSize] == BlockMap.DUNGEONS_AIR;
 
-                    // Write block data
-                    var dataIdx = blockIdx / 2;
-                    byte existingData = blockData[dataIdx];
-                    existingData <<= ((blockIdx % 2) * 4);
-                    existingData |= convertedData;
-                    blockData[dataIdx] = existingData;
+                            // If all 3 blocks are air, the target is a walkable floor
+                            // If hasCeiling, then we are in a tunnel
+                            if (aboveT1 && aboveT2) {
+                                heightPlane[planeIdx] = (byte) targetY;
+                                walkablePlane[planeIdx] = (byte) (targetY + 1);
+                                regionPlane[planeIdx] = hasCeiling ? (byte) 3 : (byte) 0;
+                            } else if (regionPlane[planeIdx] != 0 && regionPlane[planeIdx] != 3) {
+                                // Only overwrite if we haven't found a floor (0/3) yet
+                                // Block is solid but no headroom -> it's a wall
+                                regionPlane[planeIdx] = 4;
+                                heightPlane[planeIdx] = (byte) targetY;
+                                walkablePlane[planeIdx] = 0;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -111,6 +167,12 @@ public record Tile(
         }
 
         String encodedBlocks = Utils.compressAndEncode(blocks);
+        String encodedHeight = Utils.compressAndEncode(heightPlane);
+        String encodedRegion = Utils.compressAndEncode(regionPlane);
+        // Currently we just use the same
+        // todo for one day
+        String encodedRegionY = encodedHeight;
+        String encodedWalkable = Utils.compressAndEncode(walkablePlane);
 
         for (var miss: missing) {
             var msg = Component.translatable("message.conversion.block_missing", miss);
@@ -122,9 +184,10 @@ public record Tile(
                 pos,
                 size,
                 encodedBlocks,
-                "",
-                "",
-                "",
+                encodedRegion,
+                encodedHeight,
+                encodedRegionY,
+                encodedWalkable,
                 doors,
                 regions
         ));

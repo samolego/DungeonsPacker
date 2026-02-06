@@ -15,13 +15,15 @@ public class Region extends Door {
     }
 
     public enum Type {
+        @SerializedName("trigger")
         TRIGGER,
+        @SerializedName("")
         EMPTY;
 
 
         public static Type parse(String type) {
             if (type.isEmpty()) return EMPTY;
-            return Type.valueOf(type);
+            return Type.valueOf(type.toUpperCase());
         }
 
         @Override
