@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.state.LevelRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -30,16 +31,18 @@ public class LevelRendererMixin {
 
     @Inject(method = "extractBlockOutline", at = @At("HEAD"), cancellable = true)
     private void extractBlockOutline(final Camera camera, final LevelRenderState levelRenderState, CallbackInfo ci) {
-        LocalPlayer player = this.minecraft.player;
-        if (player.getMainHandItem().getItem() == ConverterItems.TILE_CORNER_BLOCK_ITEM) {
-            // Show the block outline
-            Vec3 lookAngle = player.getLookAngle();
-            BlockPos targetPos = BlockPos.containing(player.getEyePosition().add(lookAngle.scale(player.blockInteractionRange())));
-            if (player.level().getBlockState(targetPos).canBeReplaced()) {
-                CollisionContext context = CollisionContext.of(camera.entity());
-                VoxelShape shape = ConverterBlocks.TILE_CORNER_BLOCK.defaultBlockState().getShape(player.level(), targetPos, context);
-                levelRenderState.blockOutlineRenderState = new BlockOutlineRenderState(targetPos, true, true, shape);
-                ci.cancel();
+        if (this.minecraft.hitResult instanceof BlockHitResult blockHitResult && blockHitResult.getType() == Type.MISS) {
+            LocalPlayer player = this.minecraft.player;
+            if (player.getMainHandItem().getItem() == ConverterItems.TILE_CORNER_BLOCK_ITEM) {
+                // Show the block outline
+                Vec3 lookAngle = player.getLookAngle();
+                BlockPos targetPos = BlockPos.containing(player.getEyePosition().add(lookAngle.scale(player.blockInteractionRange())));
+                if (player.level().getBlockState(targetPos).canBeReplaced()) {
+                    CollisionContext context = CollisionContext.of(camera.entity());
+                    VoxelShape shape = ConverterBlocks.TILE_CORNER_BLOCK.defaultBlockState().getShape(player.level(), targetPos, context);
+                    levelRenderState.blockOutlineRenderState = new BlockOutlineRenderState(targetPos, true, true, shape);
+                    ci.cancel();
+                }
             }
         }
     }

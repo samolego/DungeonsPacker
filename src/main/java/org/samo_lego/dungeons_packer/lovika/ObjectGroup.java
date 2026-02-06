@@ -11,11 +11,9 @@ import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.samo_lego.dungeons_packer.lovika.tiles.TileListener.GSON;
+
 public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
-    private static final Gson GSON = new GsonBuilder()
-            .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
-            .disableHtmlEscaping()
-            .create();
 
     public ObjectGroup {
         if (objects == null) {
@@ -26,6 +24,10 @@ public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
     public String generateJson(CommandSourceStack executioner) {
         // Convert to JSON
         Tile[] tiles = this.getTiles(executioner);
+        return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
+    }
+
+    public String generateJson(Tile[] tiles) {
         return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
     }
 

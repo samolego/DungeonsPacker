@@ -127,17 +127,21 @@ public record Tile(
                         short targetBlockId = blockIds[targetIdx];
 
                         if (targetBlockId != BlockMap.DUNGEONS_AIR) {
-                            boolean hasCeiling = converted != BlockMap.DUNGEONS_AIR;
+                            boolean hasCeiling = y < height && converted != BlockMap.DUNGEONS_AIR;
                             boolean aboveT1 =(targetY + 1 >= height) || blockIds[targetIdx + planeSize] == BlockMap.DUNGEONS_AIR;
                             boolean aboveT2 = (targetY + 2 >= height) || blockIds[targetIdx + 2 * planeSize] == BlockMap.DUNGEONS_AIR;
 
                             // If all 3 blocks are air, the target is a walkable floor
                             // If hasCeiling, then we are in a tunnel
+                            byte currentType = regionPlane[planeIdx];
                             if (aboveT1 && aboveT2) {
-                                heightPlane[planeIdx] = (byte) targetY;
-                                walkablePlane[planeIdx] = (byte) (targetY + 1);
-                                regionPlane[planeIdx] = hasCeiling ? (byte) 3 : (byte) 0;
-                            } else if (regionPlane[planeIdx] != 0 && regionPlane[planeIdx] != 3) {
+                                if (currentType != 0 && currentType != 3) {
+                                    // First time finding a floor in this column
+                                    heightPlane[planeIdx] = (byte) targetY;
+                                    walkablePlane[planeIdx] = (byte) (targetY + 1);
+                                    regionPlane[planeIdx] = hasCeiling ? (byte) 3 : (byte) 0;
+                                }
+                            } else if (currentType != 0 && currentType != 3) {
                                 // Only overwrite if we haven't found a floor (0/3) yet
                                 // Block is solid but no headroom -> it's a wall
                                 regionPlane[planeIdx] = 4;
@@ -175,7 +179,7 @@ public record Tile(
         String encodedWalkable = Utils.compressAndEncode(walkablePlane);
 
         for (var miss: missing) {
-            var msg = Component.translatable("message.conversion.block_missing", miss);
+            var msg = Component.translatable("message.conversion.block_missing", Component.translatable(miss.getDescriptionId()));
             playerConverting.sendSystemMessage(msg);
         }
 

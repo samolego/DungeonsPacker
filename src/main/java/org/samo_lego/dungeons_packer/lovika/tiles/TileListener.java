@@ -1,13 +1,17 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
+import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 import org.samo_lego.japak.PakBuilder;
 import org.samo_lego.japak.structs.PakVersion;
 
@@ -19,6 +23,10 @@ import java.security.NoSuchAlgorithmException;
 public class TileListener {
     private static final String OBJECTGROUP_PAK_PATH = "Dungeons/Content/data/lovika/objectgroups/{}/objectgroup.json";
     private static final String LEVEL_PAK_PATH = "Dungeons/Content/data/lovika/levels/{}.json";
+    public static final Gson GSON = new GsonBuilder()
+            .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
+            .disableHtmlEscaping()
+            .create();
 
     private final String levelName;
     public final ObjectGroup objectGroup;
@@ -30,12 +38,13 @@ public class TileListener {
     public TileListener(String levelName) {
         this.levelName = levelName;
         this.objectGroup = new ObjectGroup(null);
-        this.levelProperties = new DungeonLevel();
+        this.levelProperties = new DungeonLevel(levelName);
     }
 
     public void export(CommandSourceStack executioner, File outputFile) throws IOException, NoSuchAlgorithmException {
-        byte[] objectgroupJson = this.objectGroup.generateJson(executioner).getBytes();
-        byte[] levelJson = "".getBytes();
+        var tiles = this.objectGroup.getTiles(executioner);
+        byte[] objectgroupJson = this.objectGroup.generateJson(tiles).getBytes();
+        byte[] levelJson = this.levelProperties.generateJson(tiles).getBytes();
 
         var builder = new PakBuilder(outputFile, PakVersion.V3);
         String pakPath = OBJECTGROUP_PAK_PATH.replace("{}", this.levelName);
@@ -43,7 +52,7 @@ public class TileListener {
 
         // TODO: add ability to choose level to replace
         // or even support blueprint loader
-        String levelPakPath = LEVEL_PAK_PATH.replace("{}", "archhaven");
+        String levelPakPath = LEVEL_PAK_PATH.replace("{}", this.levelProperties.id);
         builder.addFile(levelPakPath, levelJson);
 
         builder.finish();
