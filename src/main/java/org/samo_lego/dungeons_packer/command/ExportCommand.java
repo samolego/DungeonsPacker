@@ -22,7 +22,7 @@ public class ExportCommand {
 
     public static ArgumentBuilder<CommandSourceStack, ?> register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess) {
         return Commands.literal("export")
-                .then(Commands.argument("outputFile", StringArgumentType.string())
+                .then(Commands.argument("outputFile", StringArgumentType.greedyString())
                         .executes(context -> {
                            var path = StringArgumentType.getString(context, "outputFile");
                            return ExportCommand.execute(context, new File(path), false) ? 1 : 0;
@@ -40,7 +40,7 @@ public class ExportCommand {
         try {
             tileListener.export(context.getSource(), outputFile, dump);
 
-            var message = dump ? "command.dungeons_packer.dump.success" : "command.dungeons_packer.export.success";
+            var message = dump ? "commands.dungeons_packer.dump.success" : "commands.dungeons_packer.export.success";
             context.getSource().sendSuccess(
                 () -> Component.translatable(message, Component.literal(outputFile.getAbsolutePath())).withStyle(ChatFormatting.GREEN),
                 false
