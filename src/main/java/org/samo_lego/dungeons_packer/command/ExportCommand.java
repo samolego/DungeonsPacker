@@ -42,7 +42,7 @@ public class ExportCommand {
 
             var message = dump ? "commands.dungeons_packer.dump.success" : "commands.dungeons_packer.export.success";
             context.getSource().sendSuccess(
-                () -> Component.translatable(message, Component.literal(outputFile.getAbsolutePath())).withStyle(ChatFormatting.GREEN),
+                () -> Component.translatable(message, Component.literal(String.valueOf(outputFile.toPath().normalize()))).withStyle(ChatFormatting.GREEN),
                 false
             );
         } catch (IOException e) {

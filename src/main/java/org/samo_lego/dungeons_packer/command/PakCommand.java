@@ -16,7 +16,9 @@ import org.samo_lego.japak.structs.PakVersion;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
@@ -42,8 +44,8 @@ public class PakCommand {
                             })
                     )
                     .executes(context -> {
-                        var folder = context.getSource().getLevel().getServer().getWorldPath(LevelResource.ROOT).resolve("Dungeons").toFile();
-                        var success = PakCommand.pack(context, folder.getAbsolutePath());
+                        var folder = context.getSource().getLevel().getServer().getWorldPath(LevelResource.ROOT).resolve("Dungeons").normalize().toAbsolutePath();
+                        var success = PakCommand.pack(context, String.valueOf(folder));
                         return success ? 1 : 0;
                     })
             )
@@ -70,17 +72,26 @@ public class PakCommand {
         var folder = new File(input);
 
         var outputFolder = context.getSource().getLevel().getServer().getWorldPath(LevelResource.ROOT);
-        var outputFile = outputFolder.resolve(folder.getName() + ".pak").toFile();
+        var outputFile = outputFolder.resolve(folder.getName() + ".pak").normalize().toFile();
+        Path basePath = folder.toPath();
 
-        try {
+        try (var walker = Files.walk(basePath)) {
             var pak = new PakBuilder(outputFile, PakVersion.V3);
-            for (File file : folder.listFiles()) {
-                if (file.isFile()) {
-                    var relativePath = folder.toPath().relativize(file.toPath()).toString().replace("\\", "/");
-                    byte[] content = Files.readAllBytes(file.toPath());
-                    pak.addFile(relativePath, content);
-                }
-            }
+            walker.filter(Files::isRegularFile)
+                .forEach(path -> {
+                    String relativePath = basePath.getParent().relativize(path)
+                            .toString()
+                            .replace("\\", "/");
+                    try {
+                        byte[] content = Files.readAllBytes(path);
+                        pak.addFile(relativePath, content);
+                    } catch (IOException | NoSuchAlgorithmException e) {
+                        context.getSource().sendFailure(
+                            Component.translatable("commands.pak.pack.fail", Component.literal(String.valueOf(path)).withStyle(ChatFormatting.RED))
+                        );
+                    }
+                });
+
             pak.finish();
 
             context.getSource().sendSuccess(
@@ -90,9 +101,9 @@ public class PakCommand {
 
         } catch (IOException | NoSuchAlgorithmException e) {
             context.getSource().sendFailure(
-                Component.translatable("commands.pak.pack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.RED))
+                    Component.translatable("commands.pak.pack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.RED))
             );
-             return false;
+            return false;
         }
 
         return true;
@@ -111,13 +122,13 @@ public class PakCommand {
             }
 
             context.getSource().sendSuccess(
-                () -> Component.translatable("commands.pak.unpack.success", Component.literal(outputFolder.toString())).withStyle(ChatFormatting.GREEN),
+                () -> Component.translatable("commands.pak.unpack.success", Component.literal(outputFolder.toString()).withStyle(ChatFormatting.AQUA)).withStyle(ChatFormatting.GREEN),
                 false
             );
 
         } catch (GeneralSecurityException | IOException e) {
             context.getSource().sendFailure(
-                Component.translatable("commands.pak.unpack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.RED))
+                Component.translatable("commands.pak.unpack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.RED)
             );
              return false;
         }
