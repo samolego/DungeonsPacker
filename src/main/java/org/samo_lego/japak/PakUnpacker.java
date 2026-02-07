@@ -1,6 +1,5 @@
 package org.samo_lego.japak;
 
-import org.samo_lego.japak.io.PakReader;
 import org.samo_lego.japak.structs.PakEntry;
 import org.samo_lego.japak.structs.PakFooter;
 import org.samo_lego.japak.structs.PakIndex;
@@ -17,9 +16,13 @@ public class PakUnpacker {
     private final PakIndex index;
     private final byte[] key;
 
+    public PakUnpacker(String path) throws GeneralSecurityException, IOException {
+        this(path, null);
+    }
+
     public PakUnpacker(String path, byte[] key)
         throws IOException, GeneralSecurityException {
-        this.reader = new PakReader(path);
+        this.reader = new org.samo_lego.japak.io.PakReader(path);
         this.key = key;
 
         this.footer = new PakFooter();

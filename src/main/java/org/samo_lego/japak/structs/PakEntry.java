@@ -16,7 +16,7 @@ public class PakEntry {
     public long size;
     public long compressedSize;
     public CompressionMethod compressionMethod;
-    public byte[] hash = new byte[20]; // Init with zeros
+    public byte[] hash;
     public PakBlock[] compressionBlocks;
     public boolean isEncrypted;
     public int compressionBlockSize;
@@ -39,9 +39,9 @@ public class PakEntry {
 
         // This might be a bug but haven't deeply investigated yet
         //if (version >= PakVersion.V8A) {
-            this.compressionMethod = CompressionMethod.fromInt(reader.readByte());
+        //    this.compressionMethod = CompressionMethod.fromInt(reader.readByte());
         //} else {
-            this.compressionMethod = CompressionMethod.fromInt(reader.readInt());
+        this.compressionMethod = CompressionMethod.fromInt(reader.readInt());
         //}
 
         // Version 1 had a timestamp. Newer ones don't.

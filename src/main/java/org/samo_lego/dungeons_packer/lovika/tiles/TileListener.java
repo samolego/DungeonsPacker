@@ -3,9 +3,7 @@ package org.samo_lego.dungeons_packer.lovika.tiles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
@@ -13,11 +11,14 @@ import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
 import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 import org.samo_lego.japak.PakBuilder;
+import org.samo_lego.japak.PakUnpacker;
 import org.samo_lego.japak.structs.PakVersion;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
+import java.security.GeneralSecurityException;
+import java.util.List;
 
 
 public class TileListener {
@@ -41,7 +42,7 @@ public class TileListener {
         this.levelProperties = new DungeonLevel(levelName);
     }
 
-    public void export(CommandSourceStack executioner, File outputFile) throws IOException, NoSuchAlgorithmException {
+    public void export(CommandSourceStack executioner, File outputFile, boolean dump) throws IOException, GeneralSecurityException {
         var tiles = this.objectGroup.getTiles(executioner);
         byte[] objectgroupJson = this.objectGroup.generateJson(tiles).getBytes();
         byte[] levelJson = this.levelProperties.generateJson(tiles).getBytes();
@@ -50,12 +51,23 @@ public class TileListener {
         String pakPath = OBJECTGROUP_PAK_PATH.replace("{}", this.levelName);
         builder.addFile(pakPath, objectgroupJson);
 
-        // TODO: add ability to choose level to replace
-        // or even support blueprint loader
         String levelPakPath = LEVEL_PAK_PATH.replace("{}", this.levelProperties.id);
         builder.addFile(levelPakPath, levelJson);
-
         builder.finish();
+
+        if (dump) {
+            // Unpack the created pak file to a folder next to it for easier debugging
+            var unpaker = new PakUnpacker(String.valueOf(outputFile));
+            var parent = outputFile.getParentFile();
+            List<String> files = unpaker.listFiles();
+            for (String file : files) {
+                var f = new File(parent, file);
+                f.getParentFile().mkdirs();
+                try (var out = new FileOutputStream(f)) {
+                    out.write(unpaker.readFile(file));
+                }
+            }
+        }
     }
 
     public void onCornerPlaced(TileCornerBlockEntity blockEntity) {

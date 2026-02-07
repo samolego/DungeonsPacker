@@ -2,5 +2,7 @@
   "block.dungeons_packer.tile_corner": "Tile Corner",
   "block.dungeons_packer.end_mission": "End Mission",
   "message.conversion.block_missing": "The block %s is missing the translation to dungeons. Using air block instead.",
-  "itemGroup.dungeons_packer": "Dungeons Packer"
+  "itemGroup.dungeons_packer": "Dungeons Packer",
+  "command.dungeons_packer.export.success": "Sucessfully exported the map to %s",
+  "command.dungeons_packer.dump.success": "Sucessfully dumped files to %s"
 }

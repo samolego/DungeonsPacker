@@ -8,9 +8,10 @@ import net.minecraft.commands.Commands.CommandSelection;
 
 public class DungeonsCommand {
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, CommandSelection environment) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, CommandSelection _environment) {
         dispatcher.register(Commands.literal("dungeons")
             .then(ExportCommand.register(dispatcher, registryAccess))
+            .then(DumpCommand.register(dispatcher, registryAccess))
         );
 
     }
