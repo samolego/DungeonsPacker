@@ -16,7 +16,6 @@ import org.samo_lego.japak.structs.PakVersion;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -56,7 +55,7 @@ public class PakCommand {
                                 var file = new File(input);
                                 if (!file.exists() || !file.isFile()) {
                                     context.getSource().sendFailure(
-                                        Component.translatable("commands.pak.unpack.invalid_file", Component.literal(input)).withStyle(ChatFormatting.RED)
+                                        Component.translatable("commands.pak.unpack.invalid_file", Component.literal(input).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.RED)
                                     );
                                     return 0;
                                 }
@@ -87,7 +86,7 @@ public class PakCommand {
                         pak.addFile(relativePath, content);
                     } catch (IOException | NoSuchAlgorithmException e) {
                         context.getSource().sendFailure(
-                            Component.translatable("commands.pak.pack.fail", Component.literal(String.valueOf(path)).withStyle(ChatFormatting.RED))
+                            Component.translatable("commands.pak.pack.fail", Component.literal(String.valueOf(path)).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.RED)
                         );
                     }
                 });
@@ -95,13 +94,13 @@ public class PakCommand {
             pak.finish();
 
             context.getSource().sendSuccess(
-                () -> Component.translatable("commands.pak.pack.success", Component.literal(outputFile.getAbsolutePath())).withStyle(ChatFormatting.GREEN),
+                () -> Component.translatable("commands.pak.pack.success", Component.literal(outputFile.getAbsolutePath()).withStyle(ChatFormatting.AQUA)).withStyle(ChatFormatting.GREEN),
                 false
             );
 
         } catch (IOException | NoSuchAlgorithmException e) {
             context.getSource().sendFailure(
-                    Component.translatable("commands.pak.pack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.RED))
+                    Component.translatable("commands.pak.pack.fail", Component.literal(e.getMessage()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.RED)
             );
             return false;
         }
