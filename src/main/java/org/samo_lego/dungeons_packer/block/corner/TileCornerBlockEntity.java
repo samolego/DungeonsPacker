@@ -16,7 +16,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.block.ConverterBlockEntites;
-import org.samo_lego.dungeons_packer.lovika.tiles.ITileListener;
+import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
 
 import java.util.Optional;
 
@@ -32,7 +32,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
     public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
         super.preRemoveSideEffects(pos, state);
         // Notify tile listener
-        var tileListener = ((ITileListener) this.level).dungeons_packer$getTileListener();
+        var tileListener = ((IDungeonsHandlerProvider) this.level).dungeons_packer$getDungeonsHandler();
         tileListener.onCornerRemoved(this);
         tileListener.objectGroup.objects().remove(this);
     }
@@ -149,7 +149,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
     public void setLevel(Level level) {
         super.setLevel(level);
         if (level instanceof ServerLevel && this.isMainCorner()) {
-            ((ITileListener) level).dungeons_packer$getTileListener().objectGroup.objects().add(this);
+            ((IDungeonsHandlerProvider) level).dungeons_packer$getDungeonsHandler().objectGroup.objects().add(this);
         }
     }
 }

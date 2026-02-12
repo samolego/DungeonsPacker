@@ -10,7 +10,7 @@ import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
-import org.samo_lego.dungeons_packer.lovika.tiles.ITileListener;
+import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
 
 import java.util.ArrayList;
 
@@ -35,7 +35,7 @@ public class TileCornerBlock extends BaseEntityBlock implements IDungeonsConvert
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
         super.onPlace(state, level, pos, oldState, movedByPiston);
-        var tileListener = ((ITileListener) level).dungeons_packer$getTileListener();
+        var tileListener = ((IDungeonsHandlerProvider) level).dungeons_packer$getDungeonsHandler();
         var blockEntity = (TileCornerBlockEntity) level.getBlockEntity(pos);
 
         tileListener.onCornerPlaced(blockEntity);

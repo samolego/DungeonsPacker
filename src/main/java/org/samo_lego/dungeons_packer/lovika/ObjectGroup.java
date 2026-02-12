@@ -8,7 +8,7 @@ import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.samo_lego.dungeons_packer.lovika.tiles.TileListener.GSON;
+import static org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler.GSON;
 
 public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
 

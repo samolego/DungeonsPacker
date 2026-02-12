@@ -1,16 +1,16 @@
 package org.samo_lego.dungeons_packer.lovika;
 
-import com.google.gson.Gson;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 import org.samo_lego.dungeons_packer.lovika.serialization.BooleanStringSerializer;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
-import org.samo_lego.dungeons_packer.lovika.tiles.TileListener;
+import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
 import org.samo_lego.dungeons_packer.lovika.tiles.TileProperties;
 import org.samo_lego.dungeons_packer.lovika.tiles.TileProperties.Objective;
 import org.samo_lego.dungeons_packer.lovika.tiles.TileProperties.Stretch;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -36,7 +36,7 @@ public class DungeonLevel {
 
 
     public DungeonLevel(String worldName) {
-        this.objectGroups = List.of(worldName + "/objectgroup");
+        this.objectGroups = Collections.singletonList(worldName + "/objectgroup");
     }
 
     public String generateJson(Tile[] tiles) {
@@ -47,6 +47,6 @@ public class DungeonLevel {
             this.stretches.add(new Stretch(List.of(tile.id()), 1));
         }
 
-        return TileListener.GSON.toJson(this);
+        return DungeonsHandler.GSON.toJson(this);
     }
 }
