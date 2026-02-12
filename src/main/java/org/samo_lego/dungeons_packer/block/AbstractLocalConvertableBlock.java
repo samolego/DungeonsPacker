@@ -1,7 +1,6 @@
 package org.samo_lego.dungeons_packer.block;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
@@ -32,7 +31,7 @@ public abstract class AbstractLocalConvertableBlock  extends Block implements ID
                 return BlockMap.DUNGEONS_AIR;
             }
         }
-        // We're at the bottom most block, so we can define the end section
+        // We're at the bottom most block, so we can define the section
         int y = 0;
         int z = 0;
         int x = 0;

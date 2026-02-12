@@ -22,13 +22,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 public class BlockMap {
     public static final short DUNGEONS_AIR = (short) 0x0000;
 
     // Java block state to [dungeons-block-id|dungeons-block-data] as a short
     private static final Map<BlockState, Rule> CACHE = new Reference2ObjectOpenHashMap<>(256);
-    private static final Map<Block, List<Rule>> RULES = new Reference2ObjectOpenHashMap<>(1040);
+    private static final Map<Block, List<Rule>> RULES = new TreeMap<>(Comparator.comparing(b -> Block.getId(b.defaultBlockState())));//new Reference2ObjectOpenHashMap<>(256);
 
     public static Optional<Short> toDungeonBlockId(BlockState state) {
         Rule cached = CACHE.get(state);
@@ -76,6 +77,10 @@ public class BlockMap {
     }
 
     public static void initialize() { }
+
+    public static Map<Block, List<Rule>> dbg() {
+        return RULES;
+    }
 
     static {
 
@@ -246,18 +251,18 @@ public class BlockMap {
         register(Blocks.DETECTOR_RAIL, Map.of(BlockStateProperties.POWERED, true, BlockStateProperties.RAIL_SHAPE_STRAIGHT, RailShape.ASCENDING_WEST), (short) 0x001c, (byte) 0b1011);
         register(Blocks.DETECTOR_RAIL, Map.of(BlockStateProperties.POWERED, true, BlockStateProperties.RAIL_SHAPE_STRAIGHT, RailShape.ASCENDING_NORTH), (short) 0x001c, (byte) 0b1100);
         register(Blocks.DETECTOR_RAIL, Map.of(BlockStateProperties.POWERED, true, BlockStateProperties.RAIL_SHAPE_STRAIGHT, RailShape.ASCENDING_SOUTH), (short) 0x001c, (byte) 0b1101);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.DOWN), (short) 0x001d, (byte) 0b0000);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.UP), (short) 0x001d, (byte) 0b0001);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.NORTH), (short) 0x001d, (byte) 0b0010);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x001d, (byte) 0b0011);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.WEST), (short) 0x001d, (byte) 0b0100);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.EAST), (short) 0x001d, (byte) 0b0101);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.DOWN), (short) 0x001d, (byte) 0b1000);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.UP), (short) 0x001d, (byte) 0b1001);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.NORTH), (short) 0x001d, (byte) 0b1010);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x001d, (byte) 0b1011);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.WEST), (short) 0x001d, (byte) 0b1100);
-        register(Blocks.STICKY_PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.EAST), (short) 0x001d, (byte) 0b1101);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.DOWN), (short) 0x001d, (byte) 0b0000);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.UP), (short) 0x001d, (byte) 0b0001);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.NORTH), (short) 0x001d, (byte) 0b0010);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x001d, (byte) 0b0011);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.WEST), (short) 0x001d, (byte) 0b0100);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, false, BlockStateProperties.FACING, Direction.EAST), (short) 0x001d, (byte) 0b0101);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.DOWN), (short) 0x001d, (byte) 0b1000);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.UP), (short) 0x001d, (byte) 0b1001);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.NORTH), (short) 0x001d, (byte) 0b1010);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x001d, (byte) 0b1011);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.WEST), (short) 0x001d, (byte) 0b1100);
+        register(Blocks.PISTON, Map.of(BlockStateProperties.EXTENDED, true, BlockStateProperties.FACING, Direction.EAST), (short) 0x001d, (byte) 0b1101);
         register(Blocks.COBWEB, Map.of(), (short) 0x001e, (byte) 0b0000);
         register(Blocks.SHORT_GRASS, Map.of(), (short) 0x001f, (byte) 0b0001);
         register(Blocks.FERN, Map.of(), (short) 0x001f, (byte) 0b0010);
@@ -1087,6 +1092,8 @@ public class BlockMap {
         register(Blocks.OBSERVER, Map.of(BlockStateProperties.FACING, Direction.SOUTH, BlockStateProperties.POWERED, true), (short) 0x00fb, (byte) 0b1011);
         register(Blocks.OBSERVER, Map.of(BlockStateProperties.FACING, Direction.WEST, BlockStateProperties.POWERED, true), (short) 0x00fb, (byte) 0b1100);
         register(Blocks.OBSERVER, Map.of(BlockStateProperties.FACING, Direction.EAST, BlockStateProperties.POWERED, true), (short) 0x00fb, (byte) 0b1101);
+
+        // 2 bytes
         register(Blocks.WARPED_PLANKS, Map.of(), (short) 0x010c, (byte) 0b0000);
         register(Blocks.CRIMSON_NYLIUM, Map.of(), (short) 0x010d, (byte) 0b0000);
         register(Blocks.WARPED_NYLIUM, Map.of(), (short) 0x010e, (byte) 0b0000);

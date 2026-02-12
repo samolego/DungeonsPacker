@@ -2,13 +2,16 @@ package org.samo_lego.dungeons_packer.lovika.tiles;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
 import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 import org.samo_lego.japak.PakBuilder;
 import org.samo_lego.japak.PakUnpacker;
@@ -18,6 +21,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 
@@ -38,12 +43,18 @@ public class TileListener {
 
     public TileListener(String levelName) {
         this.levelName = levelName;
-        this.objectGroup = new ObjectGroup(null);
+        this.objectGroup = new ObjectGroup(new HashSet<>());
         this.levelProperties = new DungeonLevel(levelName);
     }
 
     public void export(CommandSourceStack executioner, File outputFile, boolean dump) throws IOException, GeneralSecurityException {
-        var tiles = this.objectGroup.getTiles(executioner);
+        var resourceGen = new ResourceGenerator();
+        var tiles = this.objectGroup.getTiles(executioner, resourceGen);
+        if (tiles.length < 2) {
+            executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_enough_tiles").withStyle(ChatFormatting.RED));
+            return;
+        }
+        resourceGen.fetchClientTextures(executioner.getPlayer());
         byte[] objectgroupJson = this.objectGroup.generateJson(tiles).getBytes();
         byte[] levelJson = this.levelProperties.generateJson(tiles).getBytes();
 
@@ -56,7 +67,7 @@ public class TileListener {
         builder.finish();
 
         if (dump) {
-            // Unpack the created pak file to a folder next to it for easier debugging
+            // Unpack the created pak file to a folder for easier debugging
             var unpaker = new PakUnpacker(String.valueOf(outputFile));
             var parent = outputFile.getParentFile();
             List<String> files = unpaker.listFiles();

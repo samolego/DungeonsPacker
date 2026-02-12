@@ -1,0 +1,433 @@
+package org.samo_lego.dungeons_packer.lovika.resource_pack;
+
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Iterator;
+
+public class Block2IdGenerator implements Iterator<TextureEntry> {
+    private static final String[] DUNGEONS_ID2STRING = new String[0x208 + 1];
+
+    public short counter;
+
+    @Nullable
+    private TextureEntry currentEntry;
+
+    public Block2IdGenerator() {
+        this.counter = 1;  // we start at stone
+        this.currentEntry = null;
+    }
+
+    @Override
+    public boolean hasNext() {
+        return this.counter < DUNGEONS_ID2STRING.length;
+    }
+
+    @Override
+    public TextureEntry next() {
+        if (this.currentEntry != null && this.currentEntry.hasNext()) {
+            this.currentEntry  = this.currentEntry.next();
+            return this.currentEntry;
+        }
+
+        short id = this.getNextIndex();
+        if (id == -1) {
+            throw new IllegalStateException("No more block IDs available");
+        }
+
+        this.currentEntry = new TextureEntry(id, (byte) 0, DUNGEONS_ID2STRING[id]);
+        return this.currentEntry;
+    }
+
+    private short getNextIndex() {
+        do {
+            ++this.counter;
+        } while (this.hasNext() && DUNGEONS_ID2STRING[this.counter] != null);
+
+        if (this.hasNext()) {
+            return this.counter;
+        } else {
+            return -1;
+        }
+    }
+
+
+
+    private static void register(int blockId, String resourcePackInfo) {
+        DUNGEONS_ID2STRING[blockId] = resourcePackInfo;
+    }
+
+    static {
+        register(0x0, "air");
+        register(0x1, "stone");
+        register(0x2, "grass");
+        register(0x3, "dirt");
+        register(0x4, "cobblestone");
+        register(0x5, "planks");
+        register(0x6, "sapling");
+        register(0x7, "bedrock");
+        register(0x8, "flowing_water");
+        register(0x9, "water");
+        register(0xa, "flowing_lava");
+        register(0xb, "lava");
+        register(0xc, "sand");
+        register(0xd, "gravel");
+        register(0xe, "gold_ore");
+        register(0xf, "iron_ore");
+        register(0x10, "coal_ore");
+        register(0x11, "log");
+        register(0x12, "leaves");
+        register(0x13, "sponge");
+        register(0x14, "glass");
+        register(0x15, "lapis_ore");
+        register(0x16, "lapis_block");
+        register(0x17, "dispenser");
+        register(0x18, "sandstone");
+        register(0x19, "noteblock");
+        register(0x1a, "bed");
+        register(0x1b, "golden_rail");
+        register(0x1c, "detector_rail");
+        register(0x1d, "sticky_piston");
+        register(0x1e, "web");
+        register(0x1f, "tallgrass");
+        register(0x20, "deadbush");
+        register(0x21, "piston");
+        register(0x22, "pistonArmCollision");
+        register(0x23, "wool");
+        register(0x25, "yellow_flower");
+        register(0x26, "red_flower");
+        register(0x27, "brown_mushroom");
+        register(0x28, "red_mushroom");
+        register(0x29, "gold_block");
+        register(0x2a, "iron_block");
+        register(0x2b, "double_stone_slab");
+        register(0x2c, "stone_slab");
+        register(0x2d, "brick_block");
+        register(0x2e, "tnt");
+        register(0x2f, "bookshelf");
+        register(0x30, "mossy_cobblestone");
+        register(0x31, "obsidian");
+        register(0x32, "torch");
+        register(0x33, "fire");
+        register(0x34, "mob_spawner");
+        register(0x35, "oak_stairs");
+        register(0x36, "chest");
+        register(0x37, "redstone_wire");
+        register(0x38, "diamond_ore");
+        register(0x39, "diamond_block");
+        register(0x3a, "crafting_table");
+        register(0x3b, "wheat");
+        register(0x3c, "farmland");
+        register(0x3d, "furnace");
+        register(0x3e, "lit_furnace");
+        register(0x3f, "standing_sign");
+        register(0x40, "wooden_door");
+        register(0x41, "ladder");
+        register(0x42, "rail");
+        register(0x43, "stone_stairs");
+        register(0x44, "wall_sign");
+        register(0x45, "lever");
+        register(0x46, "stone_pressure_plate");
+        register(0x47, "iron_door");
+        register(0x48, "wooden_pressure_plate");
+        register(0x49, "redstone_ore");
+        register(0x4a, "lit_redstone_ore");
+        register(0x4b, "unlit_redstone_torch");
+        register(0x4c, "redstone_torch");
+        register(0x4d, "stone_button");
+        register(0x4e, "snow_layer");
+        register(0x4f, "ice");
+        register(0x50, "snow");
+        register(0x51, "cactus");
+        register(0x52, "clay");
+        register(0x53, "reeds");
+        register(0x55, "fence");
+        register(0x56, "pumpkin");
+        register(0x57, "netherrack");
+        register(0x58, "soul_sand");
+        register(0x59, "glowstone");
+        register(0x5a, "portal");
+        register(0x5b, "lit_pumpkin");
+        register(0x5c, "cake");
+        register(0x5d, "unpowered_repeater");
+        register(0x5e, "powered_repeater");
+        register(0x5f, "invisibleBedrock");
+        register(0x60, "trapdoor");
+        register(0x61, "monster_egg");
+        register(0x62, "stonebrick");
+        register(0x63, "brown_mushroom_block");
+        register(0x64, "red_mushroom_block");
+        register(0x65, "iron_bars");
+        register(0x66, "glass_pane");
+        register(0x67, "melon_block");
+        register(0x68, "pumpkin_stem");
+        register(0x69, "melon_stem");
+        register(0x6a, "vine");
+        register(0x6b, "fence_gate");
+        register(0x6c, "brick_stairs");
+        register(0x6d, "stone_brick_stairs");
+        register(0x6e, "mycelium");
+        register(0x6f, "waterlily");
+        register(0x70, "nether_brick");
+        register(0x71, "nether_brick_fence");
+        register(0x72, "nether_brick_stairs");
+        register(0x73, "nether_wart");
+        register(0x74, "enchanting_table");
+        register(0x75, "brewing_stand");
+        register(0x76, "cauldron");
+        register(0x77, "end_portal");
+        register(0x78, "end_portal_frame");
+        register(0x79, "end_stone");
+        register(0x7a, "dragon_egg");
+        register(0x7b, "lit_redstone_lamp");
+        register(0x7c, "redstone_lamp");
+        register(0x7d, "dropper");
+        register(0x7e, "activator_rail");
+        register(0x7f, "cocoa");
+        register(0x80, "sandstone_stairs");
+        register(0x81, "emerald_ore");
+        register(0x82, "ender_chest");
+        register(0x83, "tripwire_hook");
+        register(0x84, "tripWire");
+        register(0x85, "emerald_block");
+        register(0x86, "spruce_stairs");
+        register(0x87, "birch_stairs");
+        register(0x88, "jungle_stairs");
+        register(0x89, "blackstone_slab");
+        register(0x8a, "beacon");
+        register(0x8b, "cobblestone_wall");
+        register(0x8c, "flower_pot");
+        register(0x8d, "carrots");
+        register(0x8e, "potatoes");
+        register(0x8f, "wooden_button");
+        register(0x90, "skull");
+        register(0x91, "anvil");
+        register(0x93, "light_weighted_pressure_plate");
+        register(0x94, "heavy_weighted_pressure_plate");
+        register(0x95, "unpowered_comparator");
+        register(0x96, "powered_comparator");
+        register(0x97, "daylight_detector");
+        register(0x98, "redstone_block");
+        register(0x99, "quartz_ore");
+        register(0x9a, "hopper");
+        register(0x9b, "quartz_block");
+        register(0x9c, "quartz_stairs");
+        register(0x9d, "double_wooden_slab");
+        register(0x9e, "wooden_slab");
+        register(0x9f, "stained_hardened_clay");
+        register(0xa0, "white_stained_glass_pane");
+        register(0xa1, "leaves2");
+        register(0xa2, "log2");
+        register(0xa3, "acacia_stairs");
+        register(0xa4, "dark_oak_stairs");
+        register(0xa5, "slime");
+        register(0xa7, "iron_trapdoor");
+        register(0xa8, "prismarine");
+        register(0xaa, "hay_block");
+        register(0xab, "carpet");
+        register(0xac, "hardened_clay");
+        register(0xad, "coal_block");
+        register(0xae, "packed_ice");
+        register(0xaf, "double_plant");
+        register(0xb2, "daylight_detector_inverted");
+        register(0xb3, "red_sandstone");
+        register(0xb4, "red_sandstone_stairs");
+        register(0xb5, "double_stone_slab2");
+        register(0xb6, "stone_slab2");
+        register(0xb7, "spruce_fence_gate");
+        register(0xb8, "birch_fence_gate");
+        register(0xb9, "jungle_fence_gate");
+        register(0xba, "dark_oak_fence_gate");
+        register(0xbb, "acacia_fence_gate");
+        register(0xc1, "spruce_door");
+        register(0xc2, "birch_door");
+        register(0xc3, "jungle_door");
+        register(0xc4, "acacia_door");
+        register(0xc5, "dark_oak_door");
+        register(0xc6, "grass_path");
+        register(0xc8, "chorus_flower");
+        register(0xc9, "purpur_block");
+        register(0xcb, "purpur_stairs");
+        register(0xce, "end_bricks");
+        register(0xd0, "end_rod");
+        register(0xd1, "end_gateway");
+        register(0xd7, "red_nether_brick");
+        register(0xd8, "bone_block");
+        register(0xdb, "purple_glazed_terracotta");
+        register(0xdc, "white_glazed_terracotta");
+        register(0xdd, "orange_glazed_terracotta");
+        register(0xde, "magenta_glazed_terracotta");
+        register(0xdf, "light_blue_glazed_terracotta");
+        register(0xe0, "custom_0");
+        register(0xe1, "custom_1");
+        register(0xe2, "custom_2");
+        register(0xe3, "custom_3");
+        register(0xe4, "custom_4");
+        register(0xe5, "custom_5");
+        register(0xe6, "custom_6");
+        register(0xe7, "custom_7");
+        register(0xe8, "custom_8");
+        register(0xe9, "custom_9");
+        register(0xea, "custom_10");
+        register(0xeb, "custom_11");
+        register(0xec, "custom_12");
+        register(0xed, "custom_13");
+        register(0xee, "custom_14");
+        register(0xef, "custom_15");
+        register(0xf0, "chorus_plant");
+        register(0xf2, "camera");
+        register(0xf3, "podzol");
+        register(0xf4, "beetroot");
+        register(0xf5, "stonecutter");
+        register(0xf6, "glowingobsidian");
+        register(0xf7, "netherreactor");
+        register(0xfa, "movingBlock");
+        register(0xfb, "observer");
+        register(0x104, "stripped_spruce_log");
+        register(0x105, "stripped_birch_log");
+        register(0x106, "stripped_jungle_log");
+        register(0x107, "stripped_acacia_log");
+        register(0x108, "stripped_dark_oak_log");
+        register(0x109, "stripped_oak_log");
+        register(0x10c, "element_0");
+        register(0x10d, "element_1");
+        register(0x10e, "element_2");
+        register(0x10f, "element_3");
+        register(0x110, "element_4");
+        register(0x111, "element_5");
+        register(0x112, "element_6");
+        register(0x113, "element_7");
+        register(0x114, "element_8");
+        register(0x115, "element_9");
+        register(0x116, "element_10");
+        register(0x117, "element_11");
+        register(0x118, "element_12");
+        register(0x119, "element_13");
+        register(0x11a, "element_14");
+        register(0x11b, "element_15");
+        register(0x11c, "element_16");
+        register(0x11d, "element_17");
+        register(0x11e, "element_18");
+        register(0x11f, "element_19");
+        register(0x120, "element_20");
+        register(0x121, "element_21");
+        register(0x122, "element_22");
+        register(0x123, "element_23");
+        register(0x124, "element_24");
+        register(0x125, "element_25");
+        register(0x126, "element_26");
+        register(0x127, "element_27");
+        register(0x128, "element_28");
+        register(0x129, "element_29");
+        register(0x12a, "element_30");
+        register(0x12b, "element_31");
+        register(0x12c, "element_32");
+        register(0x12d, "element_33");
+        register(0x12e, "element_34");
+        register(0x12f, "element_35");
+        register(0x130, "element_36");
+        register(0x131, "element_37");
+        register(0x132, "element_38");
+        register(0x133, "element_39");
+        register(0x134, "element_40");
+        register(0x135, "element_41");
+        register(0x136, "element_42");
+        register(0x137, "element_43");
+        register(0x138, "element_44");
+        register(0x139, "element_45");
+        register(0x13a, "element_46");
+        register(0x13b, "element_47");
+        register(0x13c, "element_48");
+        register(0x13d, "element_49");
+        register(0x13e, "element_50");
+        register(0x13f, "element_51");
+        register(0x140, "element_52");
+        register(0x141, "element_53");
+        register(0x142, "element_54");
+        register(0x143, "element_55");
+        register(0x144, "element_56");
+        register(0x145, "element_57");
+        register(0x146, "element_58");
+        register(0x147, "element_59");
+        register(0x148, "element_60");
+        register(0x149, "element_61");
+        register(0x14a, "element_62");
+        register(0x14b, "element_63");
+        register(0x14c, "element_64");
+        register(0x14d, "element_65");
+        register(0x14e, "element_66");
+        register(0x14f, "element_67");
+        register(0x150, "element_68");
+        register(0x151, "element_69");
+        register(0x152, "element_70");
+        register(0x153, "element_71");
+        register(0x154, "element_72");
+        register(0x155, "element_73");
+        register(0x156, "element_74");
+        register(0x157, "element_75");
+        register(0x158, "element_76");
+        register(0x159, "element_77");
+        register(0x15a, "element_78");
+        register(0x15b, "element_79");
+        register(0x15c, "element_80");
+        register(0x15d, "element_81");
+        register(0x15e, "element_82");
+        register(0x15f, "element_83");
+        register(0x160, "element_84");
+        register(0x161, "element_85");
+        register(0x162, "element_86");
+        register(0x163, "element_87");
+        register(0x164, "element_88");
+        register(0x165, "element_89");
+        register(0x166, "element_90");
+        register(0x167, "element_91");
+        register(0x168, "element_92");
+        register(0x169, "element_93");
+        register(0x16a, "element_94");
+        register(0x16b, "element_95");
+        register(0x16c, "element_96");
+        register(0x16d, "element_97");
+        register(0x16e, "element_98");
+        register(0x16f, "element_99");
+        register(0x170, "element_100");
+        register(0x171, "element_101");
+        register(0x172, "element_102");
+        register(0x173, "element_103");
+        register(0x174, "element_104");
+        register(0x175, "element_105");
+        register(0x176, "element_106");
+        register(0x177, "element_107");
+        register(0x178, "element_108");
+        register(0x179, "element_109");
+        register(0x17a, "element_110");
+        register(0x17b, "element_111");
+        register(0x17c, "element_112");
+        register(0x17d, "element_113");
+        register(0x17e, "element_114");
+        register(0x17f, "element_115");
+        register(0x180, "element_116");
+        register(0x181, "element_117");
+        register(0x182, "element_118");
+        register(0x1dd, "lodestone");
+        register(0x1e7, "crimson_nylium");
+        register(0x1e8, "warped_nylium");
+        register(0x1e9, "basalt");
+        register(0x1ea, "polished_basalt");
+        register(0x1ee, "target");
+        register(0x1f9, "crimson_standing_sign");
+        register(0x1fa, "warped_standing_sign");
+        register(0x1fb, "crimson_wall_sign");
+        register(0x1fc, "warped_wall_sign");
+        register(0x1fd, "crimson_stairs");
+        register(0x1fe, "warped_stairs");
+        register(0x1ff, "crimson_fence");
+        register(0x200, "warped_fence");
+        register(0x201, "crimson_fence_gate");
+        register(0x202, "warped_fence_gate");
+        register(0x203, "crimson_button");
+        register(0x204, "warped_button");
+        register(0x205, "crimson_pressure_plate");
+        register(0x206, "warped_pressure_plate");
+        register(0x207, "crimson_slab");
+        register(0x208, "warped_slab");
+    }
+}

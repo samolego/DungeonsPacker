@@ -1,6 +1,5 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
-import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -13,6 +12,7 @@ import org.samo_lego.dungeons_packer.lovika.Utils;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +42,7 @@ public record Tile(
     }
 
 
-    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity) {
+    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity, ResourceGenerator resourceGen) {
         var tileBox = cornerBlockEntity.getRenderableBox();
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
@@ -96,9 +96,10 @@ public record Tile(
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
                             converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos.immutable(), doors, regions);
                         } else {
-                            var ids = BlockMap.toDungeonBlockId(blockState);
-                            if (ids.isPresent()) {
-                                converted = ids.get();
+                            //var ids = BlockMap.toDungeonBlockId(blockState);
+                            var ids = resourceGen.requestId(blockState);
+                            if (ids != -1) {
+                                converted = ids;
                             } else {
                                 missing.add(blockState.getBlock());
                             }
@@ -127,27 +128,86 @@ public record Tile(
                         short targetBlockId = blockIds[targetIdx];
 
                         if (targetBlockId != BlockMap.DUNGEONS_AIR) {
-                            boolean hasCeiling = y < height && converted != BlockMap.DUNGEONS_AIR;
+                            heightPlane[planeIdx] = (byte) targetY;
+                            walkablePlane[planeIdx] = (byte) (targetY + 1);
+
                             boolean aboveT1 =(targetY + 1 >= height) || blockIds[targetIdx + planeSize] == BlockMap.DUNGEONS_AIR;
                             boolean aboveT2 = (targetY + 2 >= height) || blockIds[targetIdx + 2 * planeSize] == BlockMap.DUNGEONS_AIR;
+                            boolean aboveT3 = (targetY + 3 >= height) || blockIds[blockIdx] == BlockMap.DUNGEONS_AIR;
 
                             // If all 3 blocks are air, the target is a walkable floor
                             // If hasCeiling, then we are in a tunnel
                             byte currentType = regionPlane[planeIdx];
-                            if (aboveT1 && aboveT2) {
+                            if (aboveT1 && aboveT2 && aboveT3) {
                                 if (currentType != 0 && currentType != 3) {
                                     // First time finding a floor in this column
-                                    heightPlane[planeIdx] = (byte) targetY;
-                                    walkablePlane[planeIdx] = (byte) (targetY + 1);
-                                    regionPlane[planeIdx] = hasCeiling ? (byte) 3 : (byte) 0;
+                                    regionPlane[planeIdx] = (byte) 0;
                                 }
                             } else if (currentType != 0 && currentType != 3) {
                                 // Only overwrite if we haven't found a floor (0/3) yet
                                 // Block is solid but no headroom -> it's a wall
                                 regionPlane[planeIdx] = 4;
-                                heightPlane[planeIdx] = (byte) targetY;
-                                walkablePlane[planeIdx] = 0;
+                            } else if (currentType == 0) {
+                                // We previously thought this was a floor, but now we found a ceiling block at y+3
+                                // This means it's actually a tunnel, so we update the region type to 3
+                                regionPlane[planeIdx] = 3;
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2D Plane Generation (Top-Down Scan)
+
+        // Initialize everything to 0/Void
+        Arrays.fill(regionPlane, (byte) 2);
+        Arrays.fill(heightPlane, (byte) 0);
+        Arrays.fill(walkablePlane, (byte) 0);
+
+        for (int x = 0; x < width; x++) {
+            for (int z = 0; z < depth; z++) {
+                int planeIdx = z * width + x;
+
+                // Scan from top to bottom
+                for (int y = height - 1; y >= 0; y--) {
+                    int idx = (y * depth + z) * width + x;
+                    if (blockIds[idx] == 0) continue; // Skip air
+
+                    // HEIGHT PLANE: Following Python Tile.py exactly
+                    // Only the VERY highest non-air block sets the height-plane
+                    if (heightPlane[planeIdx] == 0) {
+                        heightPlane[planeIdx] = (byte) (y + 1);
+                    }
+
+                    // Check for headroom (Need air at y+1 and y+2)
+                    boolean air1 = (y + 1 >= height) || blockIds[idx + planeSize] == 0;
+                    boolean air2 = (y + 2 >= height) || blockIds[idx + 2 * planeSize] == 0;
+
+                    if (air1 && air2) {
+                        // --- FOUND A WALKABLE SURFACE ---
+                        // According to Dungeons, if we find a floor, we STOP searching this column
+
+                        // Walkable Plane: Top solid block + 1
+                        walkablePlane[planeIdx] = (byte) (y + 1);
+
+                        // Ceiling Check: Is there a solid block at targetY + 3?
+                        boolean hasCeiling = false;
+                        for (int cy = y + 3; cy < height; cy++) {
+                            if (blockIds[(cy * depth + z) * width + x] != 0) {
+                                hasCeiling = true;
+                                break;
+                            }
+                        }
+                        regionPlane[planeIdx] = hasCeiling ? (byte) 3 : (byte) 0;
+
+                        break; // STOP column scan here
+                    } else {
+                        // --- FOUND A WALL ---
+                        // If we haven't found a walkable floor yet, mark as wall (4)
+                        if (regionPlane[planeIdx] == 2) {
+                            regionPlane[planeIdx] = 4;
+                            // walkablePlane stays 0
                         }
                     }
                 }

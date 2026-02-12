@@ -12,6 +12,7 @@ public class DungeonsCommand {
         dispatcher.register(Commands.literal("dungeons")
             .then(ExportCommand.register(dispatcher, registryAccess))
             .then(DumpCommand.register(dispatcher, registryAccess))
+            .then(DebugBlocksCommand.register(dispatcher, registryAccess))
         );
 
     }

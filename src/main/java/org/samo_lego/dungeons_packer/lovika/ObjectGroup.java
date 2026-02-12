@@ -1,11 +1,8 @@
 package org.samo_lego.dungeons_packer.lovika;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.Vec3i;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
-import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 
 import java.util.HashSet;
@@ -21,21 +18,16 @@ public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
         }
     }
 
-    public String generateJson(CommandSourceStack executioner) {
-        // Convert to JSON
-        Tile[] tiles = this.getTiles(executioner);
-        return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
-    }
 
     public String generateJson(Tile[] tiles) {
         return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
     }
 
-    public Tile[] getTiles(CommandSourceStack executioner) {
+    public Tile[] getTiles(CommandSourceStack executioner, ResourceGenerator resourceGen) {
         Tile[] tiles = new Tile[this.objects.size()];
         int i = 0;
         for (var be : this.objects) {
-            var tile = Tile.fromTileCornerBlock(executioner, be);
+            var tile = Tile.fromTileCornerBlock(executioner, be, resourceGen);
             if (tile.isPresent()) {
                 tiles[i] = tile.get();
             }

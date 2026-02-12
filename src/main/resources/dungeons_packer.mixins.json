@@ -5,6 +5,7 @@
   "mixins": [
     "ServerLevelMixin",
     "block.AbstractSkullBlockMixin",
+    "block.AirBlockMixin",
     "block.StructureBlockMixin"
   ],
   "injectors": {

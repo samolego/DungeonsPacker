@@ -18,10 +18,10 @@ public class DungeonLevel {
     public final String id = "archhaven";
 
     @SerializedName("resource-packs")
-    public List<String> resourcePacks = List.of("CactiCanyon");
+    public List<String> resourcePacks = List.of("squidcoast");
 
     @SerializedName("ambience-level-id")
-    public String ambienceLevelId = "CactiCanyon";
+    public String ambienceLevelId = "cacticanyon";
 
     @SerializedName("play-intro")
     @JsonAdapter(BooleanStringSerializer.class)
@@ -42,7 +42,6 @@ public class DungeonLevel {
     public String generateJson(Tile[] tiles) {
         // Generate one stretch for each tile
         // todo: create a fancy screen to manage this?
-
         this.stretches.clear();
         for (var tile : tiles) {
             this.stretches.add(new Stretch(List.of(tile.id()), 1));

@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.samo_lego.dungeons_packer.block.ConverterBlockEntites;
@@ -14,13 +16,13 @@ import org.samo_lego.dungeons_packer.command.PakCommand;
 import org.samo_lego.dungeons_packer.item.CreativeTabs;
 import org.samo_lego.dungeons_packer.item.ConverterItems;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
+import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
+import org.samo_lego.dungeons_packer.network.ServerNetworkHandler;
+import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
 
 public class DungeonsPacker implements ModInitializer {
 	public static final String MOD_ID = "dungeons_packer";
 
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 	public static final Gson GSON = new GsonBuilder().create();
 
@@ -34,5 +36,11 @@ public class DungeonsPacker implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(PakCommand::register);
 
 		BlockMap.initialize();
+
+
+		PayloadTypeRegistry.clientboundPlay().register(RequestTexturesS2CPacket.ID, RequestTexturesS2CPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(TextureDataC2SPacket.ID, TextureDataC2SPacket.CODEC);
+
+		ServerPlayNetworking.registerGlobalReceiver(TextureDataC2SPacket.ID, ServerNetworkHandler::onClientTextureDataReceived);
 	}
 }

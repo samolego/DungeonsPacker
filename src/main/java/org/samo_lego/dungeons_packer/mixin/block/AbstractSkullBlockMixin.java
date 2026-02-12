@@ -35,6 +35,6 @@ public class AbstractSkullBlockMixin implements IDungeonsConvertable {
             var start = new Region(relativePos, new Vec3i(1, 1, 1), PLAYER_START, PLAYER_START, Type.TRIGGER);
             regions.add(start);
         }
-        return BlockMap.DUNGEONS_AIR;
+        return BlockMap.toDungeonBlockId(level.getBlockState(currentPos)).orElse(BlockMap.DUNGEONS_AIR);
     }
 }

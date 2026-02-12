@@ -36,7 +36,7 @@ public class ConverterBlocks {
 	public static final Block TILE_CORNER_BLOCK = register(
 			"tile_corner",
 			TileCornerBlock::new,
-			BlockBehaviour.Properties.of().sound(SoundType.AMETHYST),
+			BlockBehaviour.Properties.of().sound(SoundType.NETHERITE_BLOCK),
 			false
 	);
 
