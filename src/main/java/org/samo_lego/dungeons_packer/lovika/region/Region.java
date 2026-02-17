@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import net.minecraft.core.Vec3i;
 import org.samo_lego.dungeons_packer.lovika.Door;
 
-public class Region extends Door {
+public class Region extends Door implements RegionLike {
     private final String tags;
     private final Type type;
 
@@ -12,6 +12,16 @@ public class Region extends Door {
         super(relativePos, size, name);
         this.tags = tags;
         this.type = type;
+    }
+
+    @Override
+    public String tags() {
+        return this.tags;
+    }
+
+    @Override
+    public String type() {
+        return this.type.toString();
     }
 
     public enum Type {

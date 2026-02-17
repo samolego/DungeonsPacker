@@ -1,13 +1,14 @@
 {
-	"required": true,
-	"package": "org.samo_lego.dungeons_packer.client.mixin",
-	"compatibilityLevel": "JAVA_25",
-	"client": [
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"mixins": [
-		"LevelRendererMixin"
-	]
+  "required": true,
+  "package": "org.samo_lego.dungeons_packer.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+    "LevelRendererMixin",
+    "SpriteContentsAccessor"
+    ]
 }

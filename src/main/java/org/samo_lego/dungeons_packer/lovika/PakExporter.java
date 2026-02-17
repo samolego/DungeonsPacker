@@ -41,7 +41,7 @@ public class PakExporter {
         String levelPakPath = LEVEL_PAK_PATH.replace("{}", dungeonLevel.id);
         builder.addFile(levelPakPath, levelJson);
 
-        ResourcePackGenerator.addTextures(builder, usedTextures, textureCache);
+        ResourcePackGenerator.addTextures(builder, usedTextures, textureCache, executioner.getLevel());
 
         builder.finish();
 

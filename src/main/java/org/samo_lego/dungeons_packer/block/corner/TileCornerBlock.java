@@ -10,6 +10,7 @@ import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
+import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
 
 import java.util.ArrayList;
@@ -42,7 +43,7 @@ public class TileCornerBlock extends BaseEntityBlock implements IDungeonsConvert
     }
 
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
         return BlockMap.DUNGEONS_AIR;
     }
 }

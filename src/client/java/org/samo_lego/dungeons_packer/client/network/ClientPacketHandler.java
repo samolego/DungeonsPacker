@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
+import org.samo_lego.dungeons_packer.client.BlockRenderer;
 import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+
 
 public class ClientPacketHandler {
     public static void handleRequestTextures(RequestTexturesS2CPacket packet, Context context) {
@@ -34,6 +36,7 @@ public class ClientPacketHandler {
                 Map<Identifier, byte[]> uniqueTextures = new HashMap<>();
 
                 for (Direction dir : Direction.values()) {
+
                     for (BlockModelPart part : model.collectParts(rs)) {
 
                         for (BakedQuad quad : part.getQuads(dir)) {
@@ -46,9 +49,10 @@ public class ClientPacketHandler {
 
                             // If we haven't read this specific texture yet, read it now
                             if (!uniqueTextures.containsKey(textureId)) {
-                                byte[] bytes = getRawTextureBytes(textureId, client);
-                                if (bytes.length > 0) {
-                                    uniqueTextures.put(textureId, bytes);
+                                byte[] bytes = BlockRenderer.getInstance().getRawTextureBytes(textureId, client);
+                                byte[] texture = BlockRenderer.getInstance().captureSideRaw(state, dir, client);
+                                if (texture.length > 0) {
+                                    uniqueTextures.put(textureId, texture);
                                 }
                             }
                         }
@@ -68,9 +72,10 @@ public class ClientPacketHandler {
                         }
 
                         if (!uniqueTextures.containsKey(textureId)) {
-                            byte[] bytes = getRawTextureBytes(textureId, client);
-                            if (bytes.length > 0) {
-                                uniqueTextures.put(textureId, bytes);
+                            byte[] bytes = BlockRenderer.getInstance().getRawTextureBytes(textureId, client);
+                            byte[] texture = BlockRenderer.getInstance().captureSideRaw(state, null, client);
+                            if (texture.length > 0) {
+                                uniqueTextures.put(textureId, texture);
                             }
                         }
                     }
@@ -85,19 +90,4 @@ public class ClientPacketHandler {
             ClientPlayNetworking.send(new FinishTextureDataC2SPacket());
         });
     }
-
-
-
-    public static byte[] getRawTextureBytes(Identifier textureId, Minecraft client) {
-        Identifier resourcePath = textureId.withPrefix("textures/").withSuffix(".png");
-
-        return client.getResourceManager().getResource(resourcePath).map(resource -> {
-            try (var stream = resource.open()) {
-                return stream.readAllBytes();
-            } catch (IOException e) {
-                return new byte[0];
-            }
-        }).orElse(new byte[0]);
-    }
-
 }

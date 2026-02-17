@@ -12,6 +12,7 @@ import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.region.Region.Type;
+import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -27,7 +28,7 @@ public class AbstractSkullBlockMixin implements IDungeonsConvertable {
     private SkullBlock.Type type;
 
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
         // We mixined into abstract skull to catch both wall skull and ground
         // placed skull block.
         if (this.type == Types.PLAYER) {

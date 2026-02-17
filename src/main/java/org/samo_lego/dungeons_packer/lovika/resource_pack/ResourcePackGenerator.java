@@ -1,6 +1,7 @@
 package org.samo_lego.dungeons_packer.lovika.resource_pack;
 
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
@@ -22,8 +23,8 @@ public class ResourcePackGenerator {
     public static void addTextures(
             PakBuilder builder,
             Map<BlockState, TextureEntry> usedTextures,
-            Map<BlockState, TextureBytes> textures
-    ) throws IOException, NoSuchAlgorithmException {
+            Map<BlockState, TextureBytes> textures,
+            ServerLevel level) throws IOException, NoSuchAlgorithmException {
 
         var terrainTexture = new TerrainTextureJson();
         var resources = new ResourcesJson();
@@ -49,7 +50,13 @@ public class ResourcePackGenerator {
                         builder.addFile(path, bytes);
 
                         // All the directions that use this texture
+                        var blockShape = BlockShape.fromBlockState(blockState, level);
                         resourceId2texturePath.computeIfAbsent(resourceId, _ -> new BlocksJsonTextureEntry());
+
+                        if (blockShape != null) {
+                            resourceId2texturePath.get(resourceId).blockshape = blockShape;
+                        }
+
                         Arrays.stream(Direction.values())
                                 .filter(dir -> identifier.equals(blockTextures.sideMappings().get(dir)))
                                 .forEach(dir -> resourceId2texturePath.get(resourceId).put(dir, fileName));
@@ -93,5 +100,4 @@ public class ResourcePackGenerator {
             this.textures.put(direction, path);
         }
     }
-
 }

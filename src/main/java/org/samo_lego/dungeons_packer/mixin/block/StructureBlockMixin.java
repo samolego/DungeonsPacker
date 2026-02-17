@@ -9,6 +9,7 @@ import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
+import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ import java.util.ArrayList;
 @Mixin(StructureBlock.class)
 public class StructureBlockMixin implements IDungeonsConvertable {
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
         var blockEntity = level.getBlockEntity(absolutePos);
         if (blockEntity instanceof StructureBlockEntity sbe) {
             var structName = sbe.getStructureName();

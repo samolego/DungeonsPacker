@@ -13,6 +13,7 @@ import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
+import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +31,7 @@ public record Tile(
         @SerializedName("region-y-plane") String regionYPlane,
         @SerializedName("walkable-plane") String walkablePlane,
         List<Door> doors,
-        List<Region> regions
+        List<RegionLike> regions
 ) {
     public Tile {
         if (doors == null) {
@@ -47,7 +48,7 @@ public record Tile(
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
         var doors = new ArrayList<Door>();
-        var regions = new ArrayList<Region>();
+        var regions = new ArrayList<RegionLike>();
 
 
         int height = size.getY();

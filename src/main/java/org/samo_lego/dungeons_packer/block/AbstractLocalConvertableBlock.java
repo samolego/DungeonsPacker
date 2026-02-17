@@ -10,6 +10,7 @@ import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
+import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
 import java.util.ArrayList;
 
@@ -20,7 +21,7 @@ public abstract class AbstractLocalConvertableBlock  extends Block implements ID
 
 
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<Region> regions) {
+    public short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
         // Check neighbour blocks
         for (var direction : Direction.values()) {
             BlockPos neighborPos = absolutePos.relative(direction);
