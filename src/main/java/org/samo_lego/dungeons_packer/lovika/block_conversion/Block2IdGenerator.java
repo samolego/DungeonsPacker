@@ -1,6 +1,7 @@
-package org.samo_lego.dungeons_packer.lovika.resource_pack;
+package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
 import org.jetbrains.annotations.Nullable;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureEntry;
 
 import java.util.Iterator;
 
@@ -13,7 +14,7 @@ public class Block2IdGenerator implements Iterator<TextureEntry> {
     private TextureEntry currentEntry;
 
     public Block2IdGenerator() {
-        this.counter = 1;  // we start at stone
+        this.counter = 0;
         this.currentEntry = null;
     }
 
@@ -24,10 +25,10 @@ public class Block2IdGenerator implements Iterator<TextureEntry> {
 
     @Override
     public TextureEntry next() {
-        if (this.currentEntry != null && this.currentEntry.hasNext()) {
+        /*if (this.currentEntry != null && this.currentEntry.hasNext()) {
             this.currentEntry  = this.currentEntry.next();
             return this.currentEntry;
-        }
+        }*/
 
         short id = this.getNextIndex();
         if (id == -1) {
@@ -41,7 +42,7 @@ public class Block2IdGenerator implements Iterator<TextureEntry> {
     private short getNextIndex() {
         do {
             ++this.counter;
-        } while (this.hasNext() && DUNGEONS_ID2STRING[this.counter] != null);
+        } while (this.hasNext() && DUNGEONS_ID2STRING[this.counter] == null);
 
         if (this.hasNext()) {
             return this.counter;

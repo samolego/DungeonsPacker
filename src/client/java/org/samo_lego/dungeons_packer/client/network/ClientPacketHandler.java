@@ -1,61 +1,103 @@
 package org.samo_lego.dungeons_packer.client.network;
 
-import com.mojang.authlib.minecraft.client.MinecraftClient;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.Context;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.ParticleProvider.Sprite;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BakedQuad.SpriteInfo;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
+import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ClientPacketHandler {
     public static void handleRequestTextures(RequestTexturesS2CPacket packet, Context context) {
         var client = context.client();
         client.execute(() -> {
-            // Run on the client thread
+            // Minecraft also uses 42 internally
+            // so ... I just copied them :P
+            var rs = RandomSource.create(42L);
             for (long lid : packet.blockStates()) {
-                int id = (int) lid;
-                var state = Block.stateById(id);
+                int stateId = (int) lid;
+                var state = Block.stateById(stateId);
                 var model = client.getBlockRenderer().getBlockModel(state);
-                Set<SpriteInfo> sprites = new HashSet<>();
+
+                Map<Direction, Identifier> sideMappings = new EnumMap<>(Direction.class);
+                Map<Identifier, byte[]> uniqueTextures = new HashMap<>();
 
                 for (Direction dir : Direction.values()) {
-                    // Who'd think Minecraft uses 42 too :P (ModelBlockRenderer)
-                    for (BlockModelPart part : model.collectParts(RandomSource.create(42L))) {
-                        part.getQuads(dir).forEach(quad -> sprites.add(quad.spriteInfo()));
+                    for (BlockModelPart part : model.collectParts(rs)) {
+
+                        for (BakedQuad quad : part.getQuads(dir)) {
+                            var spriteInfo = quad.spriteInfo();
+
+                            var sprite = spriteInfo.sprite();
+                            var textureId = sprite.contents().name();
+
+                            sideMappings.put(dir, textureId);
+
+                            // If we haven't read this specific texture yet, read it now
+                            if (!uniqueTextures.containsKey(textureId)) {
+                                byte[] bytes = getRawTextureBytes(textureId, client);
+                                if (bytes.length > 0) {
+                                    uniqueTextures.put(textureId, bytes);
+                                }
+                            }
+                        }
                     }
                 }
 
-                sprites.forEach(spriteInfo -> {
-                    // Get byte[] texture
-                    try (var sprite = spriteInfo.sprite()) {
-                        var textureId = sprite.contents().name();
-                        byte[] bytes = getRawTextureBytes(textureId, client);
-                        ClientPlayNetworking.send(new TextureDataC2SPacket(id, textureId, bytes));
+                // Also check 'null' (non-culled) quads so we don't miss
+                // the inside of blocks or non-cube shapes
+                for (BlockModelPart part : model.collectParts(RandomSource.create(42L))) {
+                    for (BakedQuad quad : part.getQuads(null)) {
+                        var textureId = quad.spriteInfo().sprite().contents().name();
+
+                        // If a side doesn't have a specific texture yet,
+                        // the null quad is a good fallback.
+                        for (Direction d : Direction.values()) {
+                            sideMappings.putIfAbsent(d, textureId);
+                        }
+
+                        if (!uniqueTextures.containsKey(textureId)) {
+                            byte[] bytes = getRawTextureBytes(textureId, client);
+                            if (bytes.length > 0) {
+                                uniqueTextures.put(textureId, bytes);
+                            }
+                        }
                     }
-                });
+                }
+
+                // Send the unified packet if we found any info
+                if (!sideMappings.isEmpty()) {
+                    ClientPlayNetworking.send(new TextureDataC2SPacket(stateId, sideMappings, uniqueTextures));
+                }
             }
+
+            ClientPlayNetworking.send(new FinishTextureDataC2SPacket());
         });
     }
 
-    public static byte[] getRawTextureBytes(Identifier spriteId, Minecraft client) {
-        Identifier resourcePath = spriteId.withPrefix("textures/").withSuffix(".png");
 
-        try (var resource = client.getResourceManager().open(resourcePath)) {
-            return resource.readAllBytes();
-        } catch (IOException e) {
-            return new byte[0];
-        }
+
+    public static byte[] getRawTextureBytes(Identifier textureId, Minecraft client) {
+        Identifier resourcePath = textureId.withPrefix("textures/").withSuffix(".png");
+
+        return client.getResourceManager().getResource(resourcePath).map(resource -> {
+            try (var stream = resource.open()) {
+                return stream.readAllBytes();
+            } catch (IOException e) {
+                return new byte[0];
+            }
+        }).orElse(new byte[0]);
     }
+
 }

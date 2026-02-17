@@ -2,7 +2,7 @@ package org.samo_lego.dungeons_packer.lovika;
 
 import net.minecraft.commands.CommandSourceStack;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
-import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 
 import java.util.HashSet;
@@ -23,7 +23,7 @@ public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
         return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
     }
 
-    public Tile[] getTiles(CommandSourceStack executioner, ResourceGenerator resourceGen) {
+    public Tile[] getTiles(CommandSourceStack executioner, DungeonBlockIdProvider resourceGen) {
         Tile[] tiles = new Tile[this.objects.size()];
         int i = 0;
         for (var be : this.objects) {

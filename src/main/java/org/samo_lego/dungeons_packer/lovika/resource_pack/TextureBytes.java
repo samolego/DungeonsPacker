@@ -1,5 +1,8 @@
 package org.samo_lego.dungeons_packer.lovika.resource_pack;
 
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 
-public record TextureBytes(Identifier textureId, byte[] bytes) { }
+import java.util.Map;
+
+public record TextureBytes(Map<Direction, Identifier> sideMappings, Map<Identifier, byte[]> bytes) { }

@@ -18,14 +18,14 @@ public class DungeonLevel {
     public final String id = "archhaven";
 
     @SerializedName("resource-packs")
-    public List<String> resourcePacks = List.of("squidcoast");
+    public List<String> resourcePacks = List.of("test", "squidcoast");
 
     @SerializedName("ambience-level-id")
     public String ambienceLevelId = "cacticanyon";
 
     @SerializedName("play-intro")
-    @JsonAdapter(BooleanStringSerializer.class)
-    public boolean playIntro = true;
+    //@JsonAdapter(BooleanStringSerializer.class)
+    public String playIntro = "true";
 
     @SerializedName("object-groups")
     public List<String> objectGroups;

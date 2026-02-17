@@ -16,6 +16,7 @@ import org.samo_lego.dungeons_packer.command.PakCommand;
 import org.samo_lego.dungeons_packer.item.CreativeTabs;
 import org.samo_lego.dungeons_packer.item.ConverterItems;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
+import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.ServerNetworkHandler;
 import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
@@ -40,7 +41,9 @@ public class DungeonsPacker implements ModInitializer {
 
 		PayloadTypeRegistry.clientboundPlay().register(RequestTexturesS2CPacket.ID, RequestTexturesS2CPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TextureDataC2SPacket.ID, TextureDataC2SPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(FinishTextureDataC2SPacket.ID, FinishTextureDataC2SPacket.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(TextureDataC2SPacket.ID, ServerNetworkHandler::onClientTextureDataReceived);
+		ServerPlayNetworking.registerGlobalReceiver(FinishTextureDataC2SPacket.ID, ServerNetworkHandler::onClientTextureDataFinished);
 	}
 }

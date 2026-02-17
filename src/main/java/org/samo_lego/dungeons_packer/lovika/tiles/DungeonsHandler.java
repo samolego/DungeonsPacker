@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
@@ -13,30 +14,30 @@ import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
-import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
+import org.samo_lego.dungeons_packer.lovika.PakExporter;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
+import org.samo_lego.dungeons_packer.lovika.serialization.EnumLowerCaseSerializer;
 import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
-import org.samo_lego.japak.PakBuilder;
-import org.samo_lego.japak.PakUnpacker;
-import org.samo_lego.japak.structs.PakVersion;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 
 public class DungeonsHandler {
-    private static final String OBJECTGROUP_PAK_PATH = "Dungeons/Content/data/lovika/objectgroups/{}/objectgroup.json";
-    private static final String LEVEL_PAK_PATH = "Dungeons/Content/data/lovika/levels/{}.json";
     public static final Gson GSON = new GsonBuilder()
             .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
+            .registerTypeHierarchyAdapter(Direction.class, new EnumLowerCaseSerializer<Direction>())
+            .registerTypeHierarchyAdapter(BlockShape.class, new EnumLowerCaseSerializer<BlockShape>())
             .disableHtmlEscaping()
+            .setPrettyPrinting()
+            .enableComplexMapKeySerialization()
             .create();
 
     private final String levelName;
@@ -56,7 +57,11 @@ public class DungeonsHandler {
     }
 
     public void export(CommandSourceStack executioner, File outputFile, boolean dump) {
-        var resourceGen = new ResourceGenerator(this.textureCache.keySet());
+        if (this.finishExport != null) {
+            executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.already_exporting").withStyle(ChatFormatting.RED));
+            return;
+        }
+        var resourceGen = new DungeonBlockIdProvider();
 
         var tiles = this.objectGroup.getTiles(executioner, resourceGen);
         if (tiles.length < 2) {
@@ -64,34 +69,10 @@ public class DungeonsHandler {
             return;
         }
 
-        resourceGen.fetchClientTextures(executioner.getPlayer());
+        var awaitingPackets  = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
         this.finishExport = () -> {
-            byte[] objectgroupJson = this.objectGroup.generateJson(tiles).getBytes();
-            byte[] levelJson = this.levelProperties.generateJson(tiles).getBytes();
-
             try {
-                var builder = new PakBuilder(outputFile, PakVersion.V3);
-                String pakPath = OBJECTGROUP_PAK_PATH.replace("{}", this.levelName);
-                builder.addFile(pakPath, objectgroupJson);
-
-                String levelPakPath = LEVEL_PAK_PATH.replace("{}", this.levelProperties.id);
-                builder.addFile(levelPakPath, levelJson);
-                builder.finish();
-
-                if (dump) {
-                    // Unpack the created pak file to a folder for easier debugging
-                    var unpaker = new PakUnpacker(String.valueOf(outputFile));
-                    var parent = outputFile.getParentFile();
-                    List<String> files = unpaker.listFiles();
-                    for (String file : files) {
-                        var f = new File(parent, file);
-                        f.getParentFile().mkdirs();
-                        try (var out = new FileOutputStream(f)) {
-                            out.write(unpaker.readFile(file));
-                        }
-                    }
-                }
-
+                PakExporter.writePak(executioner, outputFile, this.levelName, this.levelProperties, this.objectGroup, tiles, dump, resourceGen.getUsedTextures(), this.textureCache);
 
                 var message = dump ? "commands.dungeons_packer.dump.success" : "commands.dungeons_packer.export.success";
                 executioner.sendSuccess(
@@ -109,6 +90,23 @@ public class DungeonsHandler {
                 DungeonsPacker.LOGGER.error("General security exception", e);
             }
         };
+
+        if (awaitingPackets == 0) {
+            this.onTextureReceiveEnd();
+        }
+    }
+
+    public void onTextureReceive(BlockState blockState, TextureBytes textureBytes) {
+        this.textureCache.put(blockState, textureBytes);
+    }
+
+    public void onTextureReceiveEnd() {
+        if (this.finishExport != null) {
+            this.finishExport.run();
+            this.finishExport = null;
+        } else {
+            DungeonsPacker.LOGGER.warn("Received finish export signal without pending export.");
+        }
     }
 
     public void onCornerPlaced(TileCornerBlockEntity blockEntity) {

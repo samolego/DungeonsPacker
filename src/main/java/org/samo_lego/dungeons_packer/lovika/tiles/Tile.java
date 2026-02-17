@@ -12,7 +12,7 @@ import org.samo_lego.dungeons_packer.lovika.Utils;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
-import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourceGenerator;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +42,7 @@ public record Tile(
     }
 
 
-    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity, ResourceGenerator resourceGen) {
+    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen) {
         var tileBox = cornerBlockEntity.getRenderableBox();
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
