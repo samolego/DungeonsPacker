@@ -58,7 +58,7 @@ public class PakReader implements Closeable {
                 throw new IOException(
                     "Cannot read " +
                         size +
-                        " bytes, only " +
+                        " textureId2bytes, only " +
                         read +
                         " available."
                 );
@@ -100,7 +100,7 @@ public class PakReader implements Closeable {
                 throw new IOException(
                     "Cannot read " +
                         length +
-                        " bytes, only " +
+                        " textureId2bytes, only " +
                         read +
                         " available."
                 );

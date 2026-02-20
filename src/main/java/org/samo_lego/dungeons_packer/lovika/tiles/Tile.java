@@ -5,6 +5,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.Door;
@@ -43,7 +44,7 @@ public record Tile(
     }
 
 
-    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen) {
+    public static Optional<Tile> fromTileCornerBlock(ServerPlayer playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen) {
         var tileBox = cornerBlockEntity.getRenderableBox();
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
@@ -58,7 +59,7 @@ public record Tile(
         final int arraySize = height * depth * width;
 
         // Dungeon block IDs
-        // We pack them either into single bytes or double bytes
+        // We pack them either into single textureId2bytes or double textureId2bytes
         // depending on whether we need 16 bit ids
         short[] blockIds = new short[arraySize];
         // Half the size as we merge odd and even block data into a single byte
@@ -98,7 +99,7 @@ public record Tile(
                             converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos.immutable(), doors, regions);
                         } else {
                             //var ids = BlockMap.toDungeonBlockId(blockState);
-                            var ids = resourceGen.requestId(blockState);
+                            var ids = resourceGen.requestId(blockState, playerConverting);
                             if (ids != -1) {
                                 converted = ids;
                             } else {

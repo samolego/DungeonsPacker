@@ -101,45 +101,11 @@ public enum BlockShape {
      */
     @Nullable
     public static BlockShape fromBlockState(BlockState state, ServerLevel level) {
-        if (state.isAir()) return INVISIBLE;
         var block = state.getBlock();
 
-        var saved = level.getBlockState(BlockPos.ZERO);
-        level.setBlock(BlockPos.ZERO, state, 3, 0);
-
-        // Get the state's collision shape.
-        VoxelShape collisionShape;
-        try {
-            collisionShape = state.getCollisionShape(level, BlockPos.ZERO);
-        } catch (Exception e) {
-            DungeonsPacker.LOGGER.warn("Failed to get collision shape for {}: {}", state, e);
-            collisionShape = Shapes.INFINITY;
-        }
-        level.setBlock(BlockPos.ZERO, saved, 3, 0);
-
-
-        //=== INVISIBLE BLOCKS ===
-        if (state.getRenderShape() == RenderShape.INVISIBLE) {
-            if (Block.isShapeFullBlock(collisionShape)) {
-                // Invisible bedrock maybe - is this it?
-            }
-            return BlockShape.INVISIBLE;
-        }
-
         //=== FLUIDS ===
-        if (state.getFluidState().isFull()) {
+        if (!state.getFluidState().isEmpty()) {
             return BlockShape.WATER;
-        }
-
-        //=== LEAVES ===
-        if (block instanceof LeavesBlock || state.is(BlockTags.LEAVES)) {
-            return BlockShape.LEAVES;
-        }
-
-        //=== SLABS ===
-        boolean slabLike = Utils.areEqual(collisionShape, SlabBlockAccessor.SHAPE_BOTTOM());
-        if (block instanceof SlabBlock || slabLike) {
-            return BlockShape.BLOCK_HALF;
         }
 
         switch (block) {
@@ -246,6 +212,43 @@ public enum BlockShape {
             }
         }
 
+
+        //=== LEAVES ===
+        if (block instanceof LeavesBlock || state.is(BlockTags.LEAVES)) {
+            return BlockShape.LEAVES;
+        }
+
+
+        var saved = level.getBlockState(BlockPos.ZERO);
+        level.setBlock(BlockPos.ZERO, state, 3, 0);
+
+        // Get the state's collision shape.
+        VoxelShape collisionShape;
+        try {
+            collisionShape = state.getCollisionShape(level, BlockPos.ZERO);
+        } catch (Exception e) {
+            DungeonsPacker.LOGGER.warn("Failed to get collision shape for {}: {}", state, e);
+            collisionShape = Shapes.INFINITY;
+        }
+        level.setBlock(BlockPos.ZERO, saved, 3, 0);
+
+
+        //=== INVISIBLE BLOCKS ===
+        if (state.getRenderShape() == RenderShape.INVISIBLE) {
+            if (Block.isShapeFullBlock(collisionShape)) {
+                // Invisible bedrock maybe - is this it?
+            }
+            return BlockShape.INVISIBLE;
+        }
+
+        //=== SLABS ===
+        boolean slabLike = Utils.areEqual(collisionShape, SlabBlockAccessor.SHAPE_BOTTOM());
+        if (block instanceof SlabBlock || slabLike) {
+            return BlockShape.BLOCK_HALF;
+        }
+
+        if (state.isAir()) return INVISIBLE;
+
         //=== FULL BLOCKS ===
         // Blocks that have a full top face and at least something on the bottom are considered full blocks. This works better for some blocks
         if (Block.isFaceFull(collisionShape, Direction.UP) && collisionShape.min(Direction.Axis.Y) <= 0) {
@@ -268,5 +271,4 @@ public enum BlockShape {
         //=== DEFAULT ===
         return null;
     }
-
 }

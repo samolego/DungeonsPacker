@@ -85,7 +85,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
 
     @Override
     public Mode renderMode() {
-        if (this.otherCorner == null || !this.isMainCorner()) {
+        if (this.otherCorner == null || !this.isMainCorner() && this.level.isLoaded(this.otherCorner)) {
             return Mode.NONE;
         }
         return Mode.BOX;

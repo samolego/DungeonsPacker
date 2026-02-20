@@ -18,7 +18,9 @@ import org.samo_lego.dungeons_packer.lovika.PakExporter;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
+import org.samo_lego.dungeons_packer.lovika.serialization.CustomJsonSerializable;
 import org.samo_lego.dungeons_packer.lovika.serialization.EnumLowerCaseSerializer;
+import org.samo_lego.dungeons_packer.lovika.serialization.ICustomJsonSerializable;
 import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 
 import java.io.File;
@@ -35,6 +37,7 @@ public class DungeonsHandler {
             .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
             .registerTypeHierarchyAdapter(Direction.class, new EnumLowerCaseSerializer<Direction>())
             .registerTypeHierarchyAdapter(BlockShape.class, new EnumLowerCaseSerializer<BlockShape>())
+            .registerTypeHierarchyAdapter(ICustomJsonSerializable.class, new CustomJsonSerializable())
             .disableHtmlEscaping()
             .setPrettyPrinting()
             .enableComplexMapKeySerialization()
@@ -62,8 +65,14 @@ public class DungeonsHandler {
             return;
         }
         var resourceGen = new DungeonBlockIdProvider();
+        var player = executioner.getPlayer();
 
-        var tiles = this.objectGroup.getTiles(executioner, resourceGen);
+        if (player == null) {
+            executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_a_player").withStyle(ChatFormatting.RED));
+            return;
+        }
+
+        var tiles = this.objectGroup.getTiles(player, resourceGen);
         if (tiles.length < 2) {
             executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_enough_tiles").withStyle(ChatFormatting.RED));
             return;

@@ -79,14 +79,14 @@ public class PakFooter {
      */
     public void write(PakWriter writer) throws IOException {
         //if (this.version.value < PakVersion.V8A.value) {
-        // Legacy (44 bytes)
+        // Legacy (44 textureId2bytes)
         writer.writeInt(PAK_MAGIC);
         writer.writeInt(this.version.value);
         writer.writeLong(this.indexOffset);
         writer.writeLong(this.indexSize);
         writer.write(this.hash);
         /*} else if (this.version == PakVersion.V8A) {
-            // V8A (172 bytes) - Magic at Start
+            // V8A (172 textureId2bytes) - Magic at Start
             writer.writeInt(PAK_MAGIC);
             writer.writeInt(8); // Internal version
             writer.writeLong(this.indexOffset);
@@ -96,7 +96,7 @@ public class PakFooter {
             writer.write(this.encryptionKeyGuid);
             writer.write(new byte[107]); // Padding to reach 172
         } else {
-            // V8B (204 bytes) - GUID at Start
+            // V8B (204 textureId2bytes) - GUID at Start
             writer.write(this.encryptionKeyGuid); // 20
             writer.writeByte((byte) (this.encrypted ? 1 : 0)); // 1
             writer.writeInt(PAK_MAGIC); // 4

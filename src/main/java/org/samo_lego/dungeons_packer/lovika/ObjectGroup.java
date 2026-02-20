@@ -1,6 +1,6 @@
 package org.samo_lego.dungeons_packer.lovika;
 
-import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.level.ServerPlayer;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
@@ -23,11 +23,11 @@ public record ObjectGroup(Set<TileCornerBlockEntity> objects)  {
         return String.format("{ \"objects\": %s }", GSON.toJson(tiles));
     }
 
-    public Tile[] getTiles(CommandSourceStack executioner, DungeonBlockIdProvider resourceGen) {
+    public Tile[] getTiles(ServerPlayer player, DungeonBlockIdProvider resourceGen) {
         Tile[] tiles = new Tile[this.objects.size()];
         int i = 0;
         for (var be : this.objects) {
-            var tile = Tile.fromTileCornerBlock(executioner, be, resourceGen);
+            var tile = Tile.fromTileCornerBlock(player, be, resourceGen);
             if (tile.isPresent()) {
                 tiles[i] = tile.get();
             }

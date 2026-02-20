@@ -12,5 +12,8 @@
   "commands.pak.unpack.fail": "Failed to unpack the file due to error: %s",
   "commands.pak.unpack.success": "Successfully unpacked the file to %s",
   "commands.dungeons_packer.export.not_enough_tiles": "You need at least 2 tiles to export to dungeons.",
-  "commands.dungeons_packer.export.already_exporting": "An export is already in progress, please wait."
+  "commands.dungeons_packer.export.already_exporting": "An export is already in progress, please wait.",
+  "message.dungeons_packer.block_conversion.cache_start": "Creating block mappings ...",
+  "message.dungeons_packer.block_conversion.cache_end": "Block mappings created!",
+  "message.dungeons_packer.block_conversion.no_conversion": "Ran out of states to convert %s."
 }

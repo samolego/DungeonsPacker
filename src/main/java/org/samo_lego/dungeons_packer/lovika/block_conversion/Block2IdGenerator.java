@@ -1,60 +1,44 @@
 package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
 import org.jetbrains.annotations.Nullable;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureEntry;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-public class Block2IdGenerator implements Iterator<TextureEntry> {
+public class Block2IdGenerator {
     private static final String[] DUNGEONS_ID2STRING = new String[0x208 + 1];
+    private static final Map<BlockShape, List<TextureEntry>> SHAPE2ENTRY = new EnumMap<>(BlockShape.class);
 
     public short counter;
 
-    @Nullable
-    private TextureEntry currentEntry;
-
     public Block2IdGenerator() {
         this.counter = 0;
-        this.currentEntry = null;
     }
 
-    @Override
-    public boolean hasNext() {
-        return this.counter < DUNGEONS_ID2STRING.length;
-    }
-
-    @Override
-    public TextureEntry next() {
-        /*if (this.currentEntry != null && this.currentEntry.hasNext()) {
-            this.currentEntry  = this.currentEntry.next();
-            return this.currentEntry;
-        }*/
-
-        short id = this.getNextIndex();
-        if (id == -1) {
-            throw new IllegalStateException("No more block IDs available");
+    public static Optional<String> getResourceStringId(int blockId) {
+        if (blockId < 0 || blockId >= DUNGEONS_ID2STRING.length) {
+            return Optional.empty();
         }
-
-        this.currentEntry = new TextureEntry(id, (byte) 0, DUNGEONS_ID2STRING[id]);
-        return this.currentEntry;
+        return Optional.ofNullable(DUNGEONS_ID2STRING[blockId]);
     }
-
-    private short getNextIndex() {
-        do {
-            ++this.counter;
-        } while (this.hasNext() && DUNGEONS_ID2STRING[this.counter] == null);
-
-        if (this.hasNext()) {
-            return this.counter;
-        } else {
-            return -1;
-        }
-    }
-
 
 
     private static void register(int blockId, String resourcePackInfo) {
+        register(blockId, resourcePackInfo, null);
+    }
+
+    private static void register(int blockId, String resourcePackInfo, @Nullable BlockShape shape) {
         DUNGEONS_ID2STRING[blockId] = resourcePackInfo;
+
+        if (shape != null) {
+            SHAPE2ENTRY.computeIfAbsent(shape, _ -> new ArrayList<>())
+                    .add(new TextureEntry((short) blockId, (byte) 0, resourcePackInfo));
+        }
     }
 
     static {

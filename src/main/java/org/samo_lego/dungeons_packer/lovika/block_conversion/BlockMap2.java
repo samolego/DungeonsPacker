@@ -1,8 +1,11 @@
 package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
-import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -17,51 +20,105 @@ import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.properties.RailShape;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import org.jetbrains.annotations.Nullable;
+import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 
-public class BlockMap {
+public class BlockMap2 {
+    private record ShapeWrapper(@Nullable BlockShape shape) {
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            ShapeWrapper that = (ShapeWrapper) obj;
+
+            return shape == that.shape;
+        }
+
+        @Override
+        public int hashCode() {
+            if (shape == null) {
+                return 0;
+            }
+            return shape.hashCode();
+        }
+    }
+
     public static final short DUNGEONS_AIR = (short) 0x0000;
 
-    // Java block state to [dungeons-block-id|dungeons-block-data] as a short
-    private static final Map<BlockState, Rule> CACHE = new Reference2ObjectOpenHashMap<>(256);
     private static final Map<Block, List<Rule>> RULES = new TreeMap<>(Comparator.comparing(b -> Block.getId(b.defaultBlockState())));//new Reference2ObjectOpenHashMap<>(256);
+    private static final Map<ShapeWrapper, List<Rule>> SHAPE_CACHE = new Object2ObjectOpenHashMap<>();
 
-    public static Optional<Short> toDungeonBlockId(BlockState state) {
-        Rule cached = CACHE.get(state);
-        if (cached != null) {
-            //cached.markUsed();
-            return Optional.of(cached.result());
+    private final Set<Rule> usedRules = new HashSet<>();
+    private int fullBlockCounter = 0;
+
+    private static <T extends Comparable<T>, V extends T> void initCache(ServerPlayer player) {
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.cache_start"), true);
+        for (var entry : RULES.entrySet()) {
+            var block = entry.getKey();
+            var rules = entry.getValue();
+            for (var rule : rules) {
+                var blockstate = block.defaultBlockState();
+                for (var req : rule.requirements().entrySet()) {
+                    blockstate = blockstate.setValue((Property<T>) req.getKey(), (V) req.getValue());
+                }
+                var sw = new ShapeWrapper(BlockShape.fromBlockState(blockstate, player.level()));
+                SHAPE_CACHE.computeIfAbsent(sw, _ -> new ArrayList<>()).add(rule);
+            }
+        }
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.cache_end"), true);
+    }
+
+    public short toDungeonBlockId(BlockState state, ServerPlayer player) {
+        if (SHAPE_CACHE.isEmpty()) {
+            initCache(player);
         }
 
-        List<Rule> blockRules = RULES.get(state.getBlock());
-        if (blockRules != null) {
-            Rule bestRule = null;
-            int maxScore = -1;
+        var shape = new ShapeWrapper(BlockShape.fromBlockState(state, player.level()));
+        var conversionOptions = SHAPE_CACHE.get(shape);
 
-            for (Rule rule : blockRules) {
-                int score = rule.matches(state);
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestRule = rule;
+        if (conversionOptions == null) {
+            DungeonsPacker.LOGGER.warn("Block shape {} for state {} is not calculated!", shape.shape, state);
+            return -1;
+        }
+
+        if (shape.shape == null) {
+            // Full block
+            if (this.fullBlockCounter < conversionOptions.size()) {
+                var rule = conversionOptions.get(this.fullBlockCounter);
+                this.fullBlockCounter += 1;
+
+                return rule.result();
+            }
+        } else {
+            // Find the best match
+            int bestMatch = -1;
+            Rule bestRule = null;
+            for (var rule : conversionOptions) {
+                if (!this.usedRules.contains(rule)) {
+                    int match = rule.matches(state);
+                    if (match > bestMatch) {
+                        bestMatch = match;
+                        bestRule = rule;
+                    }
                 }
             }
-
-            if (bestRule != null) {
-                //bestRule.markUsed();
-                CACHE.put(state, bestRule);
-
-                return Optional.of(bestRule.result());
+            if (bestMatch != -1) {
+                usedRules.add(bestRule);
+                return bestRule.result();
             }
         }
 
-        return Optional.empty();
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.no_conversion", state), true);
+        return -1;
     }
 
     public static void register(Block block, Map<Property<?>, Comparable<?>> blockstateRules, short id, byte ... data) {
@@ -105,7 +162,7 @@ public class BlockMap {
         //   0: Block ID
         //   1: Block Data
         //   2: Block Data Mask (unused in Java -> Dungeons conversion, but I left it in as maybe one day we can support other way)
-        register(Blocks.AIR, Map.of(), BlockMap.DUNGEONS_AIR);
+        register(Blocks.AIR, Map.of(), BlockMap2.DUNGEONS_AIR);
         register(Blocks.STONE, Map.of(), (short) 0x0001, (byte) 0b0000);
         register(Blocks.GRANITE, Map.of(), (short) 0x0001, (byte) 0b0001);
         register(Blocks.POLISHED_GRANITE, Map.of(), (short) 0x0001, (byte) 0b0010);
@@ -183,18 +240,18 @@ public class BlockMap {
         register(Blocks.GOLD_ORE, Map.of(), (short) 0x000e, (byte) 0b0000);
         register(Blocks.IRON_ORE, Map.of(), (short) 0x000f, (byte) 0b0000);
         register(Blocks.COAL_ORE, Map.of(), (short) 0x0010, (byte) 0b0000);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0000);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0001);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0010);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0011);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0100);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0101);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0110);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0111);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1000);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1001);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1010);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1011);
+        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0000);
+        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0001);
+        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0010);
+        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0011);
+        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0100);
+        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0101);
+        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0110);
+        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0111);
+        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1000);
+        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1001);
+        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1010);
+        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1011);
         register(Blocks.OAK_WOOD, Map.of(), (short) 0x0011, (byte) 0b1100);
         register(Blocks.SPRUCE_WOOD, Map.of(), (short) 0x0011, (byte) 0b1101);
         register(Blocks.BIRCH_WOOD, Map.of(), (short) 0x0011, (byte) 0b1110);
@@ -826,13 +883,13 @@ public class BlockMap {
         register(Blocks.NETHER_QUARTZ_ORE, Map.of(), (short) 0x0099, (byte) 0b0000);
         register(Blocks.QUARTZ_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0000);
         register(Blocks.CHISELED_QUARTZ_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0001);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x009b, (byte) 0b0010);
+        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x009b, (byte) 0b0010);
         register(Blocks.SMOOTH_QUARTZ, Map.of(), (short) 0x009b, (byte) 0b0011);
         register(Blocks.DEAD_FIRE_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0100);
         register(Blocks.DEAD_BRAIN_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0101);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x009b, (byte) 0b0110);
+        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x009b, (byte) 0b0110);
         register(Blocks.DEAD_BUBBLE_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b1001);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x009b, (byte) 0b1010);
+        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x009b, (byte) 0b1010);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0000);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0001);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0010);
@@ -879,12 +936,12 @@ public class BlockMap {
         register(Blocks.DARK_OAK_LEAVES, Map.of(BlockStateProperties.PERSISTENT, false), (short) 0x00a1, (byte) 0b0001, (byte) 0b0111);
         register(Blocks.ACACIA_LEAVES, Map.of(BlockStateProperties.PERSISTENT, true), (short) 0x00a1, (byte) 0b0100, (byte) 0b0111);
         register(Blocks.DARK_OAK_LEAVES, Map.of(BlockStateProperties.PERSISTENT, true), (short) 0x00a1, (byte) 0b0101, (byte) 0b0111);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00a2, (byte) 0b0000);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00a2, (byte) 0b0001);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00a2, (byte) 0b0100);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00a2, (byte) 0b0101);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00a2, (byte) 0b1000);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00a2, (byte) 0b1001);
+        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00a2, (byte) 0b0000);
+        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00a2, (byte) 0b0001);
+        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00a2, (byte) 0b0100);
+        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00a2, (byte) 0b0101);
+        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00a2, (byte) 0b1000);
+        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00a2, (byte) 0b1001);
         register(Blocks.ACACIA_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1100);
         register(Blocks.DARK_OAK_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1101);
         register(Blocks.ACACIA_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x00a3, (byte) 0b0000);
@@ -919,9 +976,9 @@ public class BlockMap {
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x00a7, (byte) 0b1101);
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x00a7, (byte) 0b1110);
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x00a7, (byte) 0b1111);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00aa, (byte) 0b0000);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00aa, (byte) 0b0100);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00aa, (byte) 0b1000);
+        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00aa, (byte) 0b0000);
+        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00aa, (byte) 0b0100);
+        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00aa, (byte) 0b1000);
         register(Blocks.WHITE_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0000);
         register(Blocks.ORANGE_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0001);
         register(Blocks.MAGENTA_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0010);
@@ -1119,16 +1176,16 @@ public class BlockMap {
         register(Blocks.WARPED_WART_BLOCK, Map.of(), (short) 0x0112, (byte) 0b0000);
         register(Blocks.CRIMSON_PLANKS, Map.of(), (short) 0x0114, (byte) 0b0000);
         register(Blocks.QUARTZ_BRICKS, Map.of(), (short) 0x0130, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0131, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0132, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0133, (byte) 0b0000);
+        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0131, (byte) 0b0000);
+        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0132, (byte) 0b0000);
+        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0133, (byte) 0b0000);
         register(Blocks.CRYING_OBSIDIAN, Map.of(), (short) 0x015b, (byte) 0b0000);
         register(Blocks.DRIED_KELP_BLOCK, Map.of(), (short) 0x015c, (byte) 0b0000);
         register(Blocks.NETHER_GOLD_ORE, Map.of(), (short) 0x015d, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0162, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0163, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0164, (byte) 0b0000);
-        register(Blocks.CRIMSON_STEM, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0165, (byte) 0b0000);
+        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0162, (byte) 0b0000);
+        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0163, (byte) 0b0000);
+        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0164, (byte) 0b0000);
+        register(Blocks.CRIMSON_STEM, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0165, (byte) 0b0000);
         register(Blocks.CRIMSON_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0207, (byte) 0b0000);
         register(Blocks.WARPED_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0208, (byte) 0b0000);
         register(Blocks.SEA_LANTERN, Map.of(), (short) 0x010b, (byte) 0b0000);
@@ -1148,8 +1205,8 @@ public class BlockMap {
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 14), (short) 0x0156, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 15), (short) 0x0161, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 16), (short) 0x015f, (byte) 0b0000);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x01ea, (byte) 0b0000);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x01ea, (byte) 0b0100);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x01ea, (byte) 0b1000);
+        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x01ea, (byte) 0b0000);
+        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x01ea, (byte) 0b0100);
+        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x01ea, (byte) 0b1000);
     }
 }

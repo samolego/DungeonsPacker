@@ -5,4 +5,4 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 
-public record TextureBytes(Map<Direction, Identifier> sideMappings, Map<Identifier, byte[]> bytes) { }
+public record TextureBytes(Map<Direction, Identifier> direction2textureId, Map<Identifier, byte[]> textureId2bytes) { }

@@ -5,19 +5,11 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.Map;
 
-public class Rule {
-    private final Map<Property<?>, Comparable<?>> requirements;
-    private final short result;
-    private boolean wasTriggered = false; // Our tracker
-
-    public Rule(Map<Property<?>, Comparable<?>> requirements, short result) {
-        this.requirements = requirements;
-        this.result = result;
-    }
+public record Rule(Map<Property<?>, Comparable<?>> requirements, short result) {
 
     public int matches(BlockState state) {
         int count = 0;
-        for (var entry : requirements.entrySet()) {
+        for (var entry : this.requirements.entrySet()) {
             Property<?> key = entry.getKey();
 
             if (!state.hasProperty(key) || !state.getValue(key).equals(entry.getValue())) {
@@ -27,9 +19,4 @@ public class Rule {
         }
         return count;
     }
-
-    public void markUsed() { this.wasTriggered = true; }
-    public boolean wasTriggered() { return this.wasTriggered; }
-    public short getResult() { return result; }
-    public Map<Property<?>, Comparable<?>> getRequirements() { return requirements; }
 }

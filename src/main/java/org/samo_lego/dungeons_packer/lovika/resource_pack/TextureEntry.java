@@ -16,4 +16,8 @@ public record TextureEntry(short blockId, byte blockData, String resourceId) imp
     public TextureEntry next() {
         return new TextureEntry(this.blockId, (byte) (this.blockData + 1), this.resourceId);
     }
+
+    public static TextureEntry fromFullId(short fullId, String resourceId) {
+        return new TextureEntry((short) (fullId >> 4), (byte) (fullId & 0b1111), resourceId);
+    }
 }
