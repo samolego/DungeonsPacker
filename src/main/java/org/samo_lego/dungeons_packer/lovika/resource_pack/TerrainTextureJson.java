@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class TerrainTextureJson {
+    private static final String TEXTURES = "textures";
     private final String resource_pack_name = "vanilla";
     private final String texture_name = "atlas.terrain";
     private int padding = 0;
@@ -19,7 +20,6 @@ public class TerrainTextureJson {
     public void addTexture(String identifier, String identifier2, byte index) {
         if (this.texture_data.containsKey(identifier)) {
             var wrapper = this.texture_data.get(identifier);
-
             if (wrapper instanceof SingletonTexture singleton) {
                 var multiTexture = singleton.toMultiTexture();
                 multiTexture.add(identifier2, index);
@@ -28,22 +28,20 @@ public class TerrainTextureJson {
                 multi.add(identifier2, index);
             }
         } else {
-                var multiTexture = new MultiTexture();
-                multiTexture.add(identifier2, index);
-                this.texture_data.put(identifier, multiTexture);
+            this.texture_data.put(identifier, new SingletonTexture(identifier2, index));
         }
     }
 
-    private record SingletonTexture(String texture) implements ICustomJsonSerializable {
+    private record SingletonTexture(String textures, byte index) implements ICustomJsonSerializable {
         public MultiTexture toMultiTexture() {
             var multiTexture = new MultiTexture();
-            multiTexture.add(this.texture, (byte) 0);
+            multiTexture.add(this.textures, this.index);
             return multiTexture;
         }
 
         @Override
         public Object getSerializationObject() {
-            return this.texture;
+            return Map.of(TEXTURES, this.textures);
         }
     }
 
@@ -56,7 +54,7 @@ public class TerrainTextureJson {
 
         @Override
         public Object getSerializationObject() {
-            return this.textures.values();
+            return Map.of(TEXTURES, this.textures.values());
         }
     }
 }

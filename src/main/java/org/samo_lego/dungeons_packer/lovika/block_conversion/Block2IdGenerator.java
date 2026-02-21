@@ -42,6 +42,10 @@ public class Block2IdGenerator {
     }
 
     static {
+        // todo: figure out IDs of:
+        // * stonefloor
+        // * double_stonefloor_slab
+        // * stonefloor_slab
         register(0x0, "air");
         register(0x1, "stone");
         register(0x2, "grass");
@@ -50,10 +54,10 @@ public class Block2IdGenerator {
         register(0x5, "planks");
         register(0x6, "sapling");
         register(0x7, "bedrock");
-        //register(0x8, "flowing_water");
-        //register(0x9, "water");
-        //register(0xa, "flowing_lava");
-        //register(0xb, "lava");
+        register(0x8, "flowing_water");
+        register(0x9, "water");
+        register(0xa, "flowing_lava");
+        register(0xb, "lava");
         register(0xc, "sand");
         register(0xd, "gravel");
         register(0xe, "gold_ore");
@@ -104,12 +108,12 @@ public class Block2IdGenerator {
         register(0x3c, "farmland");
         register(0x3d, "furnace");
         register(0x3e, "lit_furnace");
-        //register(0x3f, "standing_sign");
+        register(0x3f, "standing_sign");
         register(0x40, "wooden_door");
         register(0x41, "ladder");
         register(0x42, "rail");
         register(0x43, "stone_stairs");
-        //register(0x44, "wall_sign");
+        register(0x44, "wall_sign");
         register(0x45, "lever");
         register(0x46, "stone_pressure_plate");
         register(0x47, "iron_door");

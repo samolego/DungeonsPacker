@@ -32,6 +32,7 @@ import net.minecraft.world.level.block.NetherPortalBlock;
 import net.minecraft.world.level.block.RedStoneWireBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.RepeaterBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.SugarCaneBlock;
@@ -187,6 +188,9 @@ public enum BlockShape {
             }
             case TripWireHookBlock _ -> {
                 return BlockShape.TRIPWIRE_HOOK;
+            }
+            case RotatedPillarBlock _ -> {
+                return BlockShape.TREE;
             }
             //=== (TRAP)DOORS ===
             case DoorBlock _ -> {
