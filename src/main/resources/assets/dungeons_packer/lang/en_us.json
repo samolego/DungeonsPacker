@@ -15,5 +15,6 @@
   "commands.dungeons_packer.export.already_exporting": "An export is already in progress, please wait.",
   "message.dungeons_packer.block_conversion.cache_start": "Creating block mappings ...",
   "message.dungeons_packer.block_conversion.cache_end": "Block mappings created!",
-  "message.dungeons_packer.block_conversion.no_conversion": "Ran out of states to convert %s."
+  "message.dungeons_packer.block_conversion.no_conversion": "Ran out of states to convert %s.",
+  "command.dungeons_packer.recreate_block_mappings.success": "Successfully reregistered block mappings!"
 }

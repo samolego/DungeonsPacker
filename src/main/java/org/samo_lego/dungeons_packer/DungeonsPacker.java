@@ -12,11 +12,11 @@ import org.apache.logging.log4j.Logger;
 import org.samo_lego.dungeons_packer.block.ConverterBlockEntites;
 import org.samo_lego.dungeons_packer.block.ConverterBlocks;
 import org.samo_lego.dungeons_packer.command.DungeonsCommand;
+import org.samo_lego.dungeons_packer.command.DungeonsPackerCommand;
 import org.samo_lego.dungeons_packer.command.PakCommand;
 import org.samo_lego.dungeons_packer.item.CreativeTabs;
 import org.samo_lego.dungeons_packer.item.ConverterItems;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
-import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap2;
 import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.ServerNetworkHandler;
@@ -35,10 +35,12 @@ public class DungeonsPacker implements ModInitializer {
 		ConverterBlockEntites.initialize();
 		CreativeTabs.initialize();
 		CommandRegistrationCallback.EVENT.register(DungeonsCommand::register);
+		CommandRegistrationCallback.EVENT.register(DungeonsPackerCommand::register);
 		CommandRegistrationCallback.EVENT.register(PakCommand::register);
 
+
 		BlockMap.initialize();
-		BlockMap2.initialize();
+		BlockMap.initialize();
 
 
 		PayloadTypeRegistry.clientboundPlay().register(RequestTexturesS2CPacket.ID, RequestTexturesS2CPacket.CODEC);

@@ -1,10 +1,7 @@
-package org.samo_lego.dungeons_packer.lovika.resource_pack;
+package org.samo_lego.dungeons_packer.lovika.resource_pack.json;
 
 import org.samo_lego.dungeons_packer.lovika.serialization.ICustomJsonSerializable;
-import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 

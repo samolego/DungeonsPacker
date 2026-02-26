@@ -1,7 +1,6 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
 import com.google.gson.annotations.SerializedName;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
@@ -10,9 +9,9 @@ import net.minecraft.world.level.block.Block;
 import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.Utils;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockConstants;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
-import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
@@ -96,7 +95,7 @@ public record Tile(
 
                         // Do the block conversion
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                            converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos.immutable(), doors, regions);
+                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), doors, regions);
                         } else {
                             //var ids = BlockMap.toDungeonBlockId(blockState);
                             var ids = resourceGen.requestId(blockState, playerConverting);
@@ -107,7 +106,7 @@ public record Tile(
                             }
                         }
 
-                        short convBlockId = (short) (converted >> 4);
+                        short convBlockId = (short) (converted >> BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT);
                         byte convertedData = (byte) (converted & 0x0F);
 
                         blockIds[blockIdx] = convBlockId;

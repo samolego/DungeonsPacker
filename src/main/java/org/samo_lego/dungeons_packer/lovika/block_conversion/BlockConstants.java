@@ -1,24 +1,13 @@
 package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
-import org.jetbrains.annotations.Nullable;
-import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
-import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureEntry;
-
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-public class Block2IdGenerator {
+public class BlockConstants {
+    public static final byte BLOCK_DATA_MASK = 0b1111;
+    public static final byte BLOCK_ID_MASK_SHIFT_COUNT = 4;
+    public static final short BLOCK_ID_MASK = (short) 0xFFF0;
     private static final String[] DUNGEONS_ID2STRING = new String[0x208 + 1];
-    private static final Map<BlockShape, List<TextureEntry>> SHAPE2ENTRY = new EnumMap<>(BlockShape.class);
 
-    public short counter;
-
-    public Block2IdGenerator() {
-        this.counter = 0;
-    }
 
     public static Optional<String> getResourceStringId(int blockId) {
         if (blockId < 0 || blockId >= DUNGEONS_ID2STRING.length) {
@@ -29,16 +18,7 @@ public class Block2IdGenerator {
 
 
     private static void register(int blockId, String resourcePackInfo) {
-        register(blockId, resourcePackInfo, null);
-    }
-
-    private static void register(int blockId, String resourcePackInfo, @Nullable BlockShape shape) {
         DUNGEONS_ID2STRING[blockId] = resourcePackInfo;
-
-        if (shape != null) {
-            SHAPE2ENTRY.computeIfAbsent(shape, _ -> new ArrayList<>())
-                    .add(new TextureEntry((short) blockId, (byte) 0, resourcePackInfo));
-        }
     }
 
     static {
@@ -315,7 +295,7 @@ public class Block2IdGenerator {
         register(0x12f, "element_35");
         register(0x130, "element_36");
         register(0x131, "element_37");
-        register(0x132, "element_38");
+         register(0x132, "element_38");  // todo - doesn't seem to work?
         register(0x133, "element_39");
         register(0x134, "element_40");
         register(0x135, "element_41");
@@ -364,7 +344,7 @@ public class Block2IdGenerator {
         register(0x160, "element_84");
         register(0x161, "element_85");
         register(0x162, "element_86");
-        register(0x163, "element_87");
+         register(0x163, "element_87");  // Todo - doesn't seem to work?
         register(0x164, "element_88");
         register(0x165, "element_89");
         register(0x166, "element_90");

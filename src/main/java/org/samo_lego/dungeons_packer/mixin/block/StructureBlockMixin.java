@@ -1,12 +1,14 @@
 package org.samo_lego.dungeons_packer.mixin.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.StructureBlock;
 import net.minecraft.world.level.block.entity.StructureBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
 import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
@@ -17,8 +19,8 @@ import java.util.ArrayList;
 @Mixin(StructureBlock.class)
 public class StructureBlockMixin implements IDungeonsConvertable {
     @Override
-    public short dungeons_packer$convertToDungeons(Level level, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
-        var blockEntity = level.getBlockEntity(absolutePos);
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions) {
+        var blockEntity = player.level().getBlockEntity(absolutePos);
         if (blockEntity instanceof StructureBlockEntity sbe) {
             var structName = sbe.getStructureName();
             var type = structName.split(":");

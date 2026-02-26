@@ -1,4 +1,4 @@
-package org.samo_lego.dungeons_packer.lovika.resource_pack;
+package org.samo_lego.dungeons_packer.lovika.resource_pack.json;
 
 import java.util.Map;
 import java.util.TreeMap;

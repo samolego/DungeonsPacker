@@ -4,8 +4,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import org.samo_lego.dungeons_packer.lovika.block_conversion.Block2IdGenerator;
-import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap2;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockConstants;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.json.ResourcesJson;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.json.TerrainTextureJson;
 import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
 import org.samo_lego.japak.PakBuilder;
 
@@ -16,7 +18,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Stream;
 
 public class ResourcePackGenerator {
     private static final String PACK_NAME = "test";
@@ -39,7 +40,7 @@ public class ResourcePackGenerator {
 
         // Add air
         resourceId2texturePath.put(
-                Block2IdGenerator.getResourceStringId(BlockMap2.DUNGEONS_AIR).orElse("air"),
+                BlockConstants.getResourceStringId(BlockMap.DUNGEONS_AIR).orElse("air"),
                 BlocksJsonTextureEntry.blockshapeOnly(BlockShape.INVISIBLE)
         );
 
@@ -68,7 +69,7 @@ public class ResourcePackGenerator {
                         var blockShape = BlockShape.fromBlockState(blockState, level);
                         resourceId2texturePath.computeIfAbsent(resourceId, _ -> new BlocksJsonTextureEntry());
 
-                        if (blockShape != null) {
+                        if (blockShape != BlockShape.FULL_BLOCK) {
                             resourceId2texturePath.get(resourceId).blockshape = blockShape;
                         }
 

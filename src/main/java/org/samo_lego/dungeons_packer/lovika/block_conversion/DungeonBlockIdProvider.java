@@ -14,11 +14,11 @@ import java.util.Set;
 
 public class DungeonBlockIdProvider {
 
-    private final BlockMap2 blockMap;
+    private final BlockMap blockMap;
     private final Map<BlockState, TextureEntry> cache;
 
     public DungeonBlockIdProvider() {
-        this.blockMap = new BlockMap2();
+        this.blockMap = new BlockMap();
         this.cache = new Reference2ObjectOpenHashMap<>();
     }
 
@@ -30,7 +30,7 @@ public class DungeonBlockIdProvider {
 
         short id = this.blockMap.toDungeonBlockId(state, player);
         if (id != -1) {
-            var stringId = Block2IdGenerator.getResourceStringId(id >> 4);
+            var stringId = BlockConstants.getResourceStringId(id >> BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT);
             var entry = TextureEntry.fromFullId(id, stringId.orElse("unknown_mapping"));
             this.cache.put(state, entry);
             return entry.getFullId();

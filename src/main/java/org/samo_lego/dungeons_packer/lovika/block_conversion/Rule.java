@@ -1,11 +1,12 @@
 package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.Map;
 
-public record Rule(Map<Property<?>, Comparable<?>> requirements, short result) {
+public record Rule(Map<Property<?>, Comparable<?>> requirements, short result, Block originalBlock) {
 
     public int matches(BlockState state) {
         int count = 0;

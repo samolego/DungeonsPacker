@@ -34,7 +34,9 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.RepeaterBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SlimeBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.StemBlock;
 import net.minecraft.world.level.block.SugarCaneBlock;
 import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.TripWireBlock;
@@ -49,11 +51,20 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
+import org.samo_lego.dungeons_packer.config.ModConfig;
 import org.samo_lego.dungeons_packer.lovika.Utils;
+import org.samo_lego.dungeons_packer.lovika.serialization.ICustomJsonSerializable;
 import org.samo_lego.dungeons_packer.mixin.block.SlabBlockAccessor;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-public enum BlockShape {
+
+public enum BlockShape implements ICustomJsonSerializable {
+    @Excluded
+    FULL_BLOCK,
+    @Excluded
+    FORCED,
     INVISIBLE,
     CROSS_TEXTURE,
     WATER,
@@ -98,11 +109,13 @@ public enum BlockShape {
      * Mostly inspired by <a href="https://github.com/TheEpicBlock/PolyMc/blob/a3eaae6a56522a830b6e9a244e2bade0431a8c59/src/main/java/io/github/theepicblock/polymc/impl/generator/BlockPolyGenerator.java#L64">PolyMc</a>
      * @param state The blockstate to get the shape of.
      * @param level The level where the blockstate is located.
-     * @return The block shape of the blockstate or null if it's a normal block.
+     * @return The block shape of the blockstate or FULL_BLOCK if it's a normal block.
      */
-    @Nullable
     public static BlockShape fromBlockState(BlockState state, ServerLevel level) {
         var block = state.getBlock();
+        if (ModConfig.getInstance().forced_blocks.contains(block)) {
+            return BlockShape.FORCED;
+        }
 
         //=== FLUIDS ===
         if (!state.getFluidState().isEmpty()) {
@@ -180,6 +193,9 @@ public enum BlockShape {
             case DoublePlantBlock _ -> {
                 return BlockShape.DOUBLE_PLANT_POLY;
             }
+            case StemBlock _ -> {
+                return BlockShape.STEM;
+            }
             case WebBlock _, VegetationBlock _, SugarCaneBlock _ -> {
                 return BlockShape.CROSS_TEXTURE;
             }
@@ -209,7 +225,7 @@ public enum BlockShape {
             case FenceBlock _ -> {
                 return BlockShape.FENCE;
             }
-            case HalfTransparentBlock _ -> {
+            case SlimeBlock _ -> {
                 return BlockShape.SLIME_BLOCK;
             }
             default -> {
@@ -256,7 +272,7 @@ public enum BlockShape {
         //=== FULL BLOCKS ===
         // Blocks that have a full top face and at least something on the bottom are considered full blocks. This works better for some blocks
         if (Block.isFaceFull(collisionShape, Direction.UP) && collisionShape.min(Direction.Axis.Y) <= 0) {
-            return null;
+            return BlockShape.FULL_BLOCK;
         }
 
         //=== NO COLLISION BLOCKS ===
@@ -267,12 +283,29 @@ public enum BlockShape {
                 }
                 return BlockShape.LADDER;
             }
-            return null;
+            return BlockShape.FULL_BLOCK;
         }
 
 
 
         //=== DEFAULT ===
-        return null;
+        return BlockShape.FULL_BLOCK;
+    }
+
+    @Override
+    public Object getSerializationObject() {
+        String shape = this.name().toLowerCase();;
+        try {
+            if (this.getClass().getField(this.name()).getAnnotation(Excluded.class) != null) {
+                return null;
+            }
+        } catch (NoSuchFieldException e) {
+            DungeonsPacker.LOGGER.error("Failed to check for @Excluded annotation on {}: {}", this.name(), e);
+        }
+
+        return shape;
     }
 }
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface Excluded { }
