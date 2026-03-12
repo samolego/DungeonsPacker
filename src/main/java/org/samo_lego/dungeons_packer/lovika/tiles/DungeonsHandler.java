@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
-import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
 import org.samo_lego.dungeons_packer.lovika.PakExporter;
@@ -78,7 +78,7 @@ public class DungeonsHandler {
             return;
         }
 
-        var awaitingPackets  = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
+        var awaitingPackets = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
         this.finishExport = () -> {
             try {
                 PakExporter.writePak(executioner, outputFile, this.levelName, this.levelProperties, this.objectGroup, tiles, dump, resourceGen.getUsedTextures(), this.textureCache);

@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.LilyPadBlock;
 import net.minecraft.world.level.block.NetherPortalBlock;
+import net.minecraft.world.level.block.PointedDripstoneBlock;
 import net.minecraft.world.level.block.RedStoneWireBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.RepeaterBlock;
@@ -196,7 +197,7 @@ public enum BlockShape implements ICustomJsonSerializable {
             case StemBlock _ -> {
                 return BlockShape.STEM;
             }
-            case WebBlock _, VegetationBlock _, SugarCaneBlock _ -> {
+            case WebBlock _, VegetationBlock _, SugarCaneBlock _, PointedDripstoneBlock _ -> {
                 return BlockShape.CROSS_TEXTURE;
             }
             case TripWireBlock _ -> {

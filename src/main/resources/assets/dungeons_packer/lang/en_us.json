@@ -1,6 +1,8 @@
 {
   "block.dungeons_packer.tile_corner": "Tile Corner",
   "block.dungeons_packer.end_mission": "End Mission",
+  "block.dungeons_packer.prefab": "Prefab",
+  "prefab_block.rotation": "Rotation",
   "message.conversion.block_missing": "The block %s is missing the translation to dungeons. Using air block instead.",
   "itemGroup.dungeons_packer": "Dungeons Packer",
   "commands.dungeons_packer.export.success": "Successfully exported the map to %s",
@@ -16,5 +18,7 @@
   "message.dungeons_packer.block_conversion.cache_start": "Creating block mappings ...",
   "message.dungeons_packer.block_conversion.cache_end": "Block mappings created!",
   "message.dungeons_packer.block_conversion.no_conversion": "Ran out of states to convert %s.",
-  "command.dungeons_packer.recreate_block_mappings.success": "Successfully reregistered block mappings!"
+  "command.dungeons_packer.recreate_block_mappings.success": "Successfully reregistered block mappings!",
+  "itemGroup.dungeons_packer_generated": "Generated Prefabs",
+  "message.dungeons_packer.prefab_conversion_failed": "Prefab conversion at %s failed. Unknown id: %s"
 }

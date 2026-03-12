@@ -2,19 +2,17 @@ package org.samo_lego.dungeons_packer.client.network;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.Context;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
-import org.samo_lego.dungeons_packer.client.BlockRenderer;
+import org.samo_lego.dungeons_packer.client.render.BlockRenderer;
 import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
 
-import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;

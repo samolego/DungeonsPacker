@@ -6,7 +6,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
-import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.Utils;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockConstants;
@@ -49,6 +49,7 @@ public record Tile(
         var size = tileBox.size();
         var doors = new ArrayList<Door>();
         var regions = new ArrayList<RegionLike>();
+        var prefabs = new ArrayList<int[]>();
 
 
         int height = size.getY();
@@ -61,7 +62,7 @@ public record Tile(
         // We pack them either into single textureId2bytes or double textureId2bytes
         // depending on whether we need 16 bit ids
         short[] blockIds = new short[arraySize];
-        // Half the size as we merge odd and even block data into a single byte
+        // Half the scale as we merge odd and even block data into a single byte
         byte[] blockData = new byte[Math.ceilDiv(arraySize, 2)];
         boolean need16bitIds = false;
 
@@ -95,7 +96,7 @@ public record Tile(
 
                         // Do the block conversion
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), doors, regions);
+                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), doors, regions, prefabs);
                         } else {
                             //var ids = BlockMap.toDungeonBlockId(blockState);
                             var ids = resourceGen.requestId(blockState, playerConverting);

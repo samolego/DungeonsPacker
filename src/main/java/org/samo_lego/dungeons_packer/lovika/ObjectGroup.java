@@ -1,7 +1,7 @@
 package org.samo_lego.dungeons_packer.lovika;
 
 import net.minecraft.server.level.ServerPlayer;
-import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 

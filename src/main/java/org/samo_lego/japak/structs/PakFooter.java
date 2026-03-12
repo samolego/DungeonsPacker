@@ -31,18 +31,18 @@ public class PakFooter {
         long footerOffset = -1;
 
         // Check 204-byte footer (V8B)
-        /*if (size >= 204) {
-            reader.setPos(size - 204);
+        /*if (scale >= 204) {
+            reader.setPos(scale - 204);
             if (reader.readInt() == PAK_MAGIC) {
-                footerOffset = size - 204;
+                footerOffset = scale - 204;
                 this.version = PakVersion.from(reader.readInt());
             }
         }
         // Check 172-byte footer (V8A)
-        if (footerOffset == -1 && size >= 172) {
-            reader.setPos(size - 172);
+        if (footerOffset == -1 && scale >= 172) {
+            reader.setPos(scale - 172);
             if (reader.readInt() == PAK_MAGIC) {
-                footerOffset = size - 172;
+                footerOffset = scale - 172;
                 this.version = PakVersion.V8A;
             }
         }*/
@@ -66,7 +66,7 @@ public class PakFooter {
 
         // If it's a newer version, we can also go back and grab the GUID and encryption flag
         /*if (this.version.value >= PakVersion.V8A.value) {
-            long footerStart = (this.version == PakVersion.V8B) ? size - 204 : size - 172;
+            long footerStart = (this.version == PakVersion.V8B) ? scale - 204 : scale - 172;
             reader.setPos(footerStart);
             this.encryptionKeyGuid = reader.readBytes(20);
             this.encrypted = reader.readByte() == 1;
