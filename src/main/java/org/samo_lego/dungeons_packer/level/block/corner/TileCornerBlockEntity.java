@@ -25,7 +25,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
     private BlockPos otherCorner;
 
     public TileCornerBlockEntity(BlockPos worldPosition, BlockState blockState) {
-        super(ConverterBlockEntites.PREFAB_BLOCK_ENTITY, worldPosition, blockState);
+        super(ConverterBlockEntites.TILE_CORNER_BLOCK_ENTITY, worldPosition, blockState);
     }
 
     @Override
