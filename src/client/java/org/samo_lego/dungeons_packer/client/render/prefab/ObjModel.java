@@ -35,9 +35,9 @@ public class ObjModel {
         // Rotation x, y, z
         var rotation = state.getPrefabData().rotation();
 
-        poseStack.mulPose(Axis.XP.rotationDegrees((float) rotation.x()));
-        poseStack.mulPose(Axis.YP.rotationDegrees((float) rotation.y()));
-        poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.z()));
+        poseStack.mulPose(Axis.XP.rotationDegrees((float) rotation.getX()));
+        poseStack.mulPose(Axis.YP.rotationDegrees((float) rotation.getY()));
+        poseStack.mulPose(Axis.ZP.rotationDegrees((float) rotation.getZ()));
 
         queue.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             renderToBuffer(pose, buffer, light, overlay);

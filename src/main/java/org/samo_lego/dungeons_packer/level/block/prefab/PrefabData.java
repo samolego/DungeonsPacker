@@ -3,6 +3,7 @@ package org.samo_lego.dungeons_packer.level.block.prefab;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -18,13 +19,13 @@ public record PrefabData(
     String BP_Class,
     Vec3 relativePos,
     Vec3 scale,
-    Vec3 rotation
+    Vec3i rotation
 ) {
     public static final StreamCodec<RegistryFriendlyByteBuf, PrefabData> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8, PrefabData::BP_Class,
             Vec3.STREAM_CODEC, PrefabData::relativePos,
             Vec3.STREAM_CODEC, PrefabData::scale,
-            Vec3.STREAM_CODEC, PrefabData::rotation,
+            Vec3i.STREAM_CODEC, PrefabData::rotation,
             PrefabData::new
     );
 
@@ -33,19 +34,19 @@ public record PrefabData(
 				Codec.sizeLimitedString(64).fieldOf("BP_Class").forGetter(PrefabData::BP_Class),
                 Vec3.CODEC.fieldOf("relativePos").forGetter(PrefabData::relativePos),
                 Vec3.CODEC.fieldOf("scale").forGetter(PrefabData::scale),
-                Vec3.CODEC.fieldOf("rotation").forGetter(PrefabData::rotation)
+                Vec3i.CODEC.fieldOf("rotation").forGetter(PrefabData::rotation)
 			)
 			.apply(i, PrefabData::new)
 	);
 
-    private static final PrefabData EMPTY = new PrefabData("", Vec3.ZERO, new Vec3(1, 1, 1), Vec3.ZERO);
+    private static final PrefabData EMPTY = new PrefabData("", Vec3.ZERO, new Vec3(1, 1, 1), Vec3i.ZERO);
 
 
     public static PrefabData getDefault() {
         return EMPTY;
     }
 
-    public PrefabData withRotation(Vec3 rotation) {
+    public PrefabData withRotation(Vec3i rotation) {
         return new PrefabData(this.BP_Class, this.relativePos, this.scale, rotation);
     }
 
@@ -72,23 +73,12 @@ public record PrefabData(
         scaleTag.putDouble("X", this.scale.x);
         scaleTag.putDouble("Y", this.scale.y);
         scaleTag.putDouble("Z", this.scale.z);
-        var rotationTag = tag.child("Rotation");
-        rotationTag.putDouble("X", this.rotation.x);
-        rotationTag.putDouble("Y", this.rotation.y);
-        rotationTag.putDouble("Z", this.rotation.z);
+        tag.putIntArray("Rotation", new int[]{this.rotation.getX(), this.rotation.getY(), this.rotation.getZ()});
     }
 
     public static PrefabData load(ValueInput input) {
         return input.child("PrefabData").map(tag -> {
             var bpClass = tag.getString("BP_Class").orElse("");
-
-            var rotationTag = tag.child("Rotation").orElseThrow();
-            var rotation = new Vec3(
-                    rotationTag.getDoubleOr("X", 0.5),
-                    rotationTag.getDoubleOr("Y", 0.0),
-                    rotationTag.getDoubleOr("Z", 0.5)
-            );
-
             var relativePosTag = tag.child("RelativePos").orElseThrow();
             var relativePos = new Vec3(
                 relativePosTag.getDoubleOr("X", 0.5),
@@ -100,6 +90,13 @@ public record PrefabData(
                 scaleTag.getDoubleOr("X", 1.0),
                 scaleTag.getDoubleOr("Y", 1.0),
                 scaleTag.getDoubleOr("Z", 1.0)
+            );
+
+            var rotationArr = tag.getIntArray("Rotation").orElse(new int[]{0, 0, 0});
+            var rotation = new Vec3i(
+                    rotationArr[0],
+                    rotationArr[1],
+                    rotationArr[2]
             );
 
             return new PrefabData(bpClass, relativePos, scale, rotation);
@@ -141,9 +138,9 @@ public record PrefabData(
         pixels[5] = packFloatToPixel((float)this.scale.z);
 
         // 4. Rotation (Pixels 6, 7, 8) - Full 32-bit Floats
-        pixels[6] = packFloatToPixel((float)this.rotation.x);
-        pixels[7] = packFloatToPixel((float)this.rotation.y);
-        pixels[8] = packFloatToPixel((float)this.rotation.z);
+        pixels[6] = packFloatToPixel((float)this.rotation.getX());
+        pixels[7] = packFloatToPixel((float)this.rotation.getY());
+        pixels[8] = packFloatToPixel((float)this.rotation.getZ());
 
         return Optional.of(pixels);
     }

@@ -2,6 +2,7 @@ package org.samo_lego.dungeons_packer.level.block.prefab;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -49,11 +50,11 @@ public class PrefabBlockEntity extends BlockEntity implements Nameable {
         return this.prefabData.BP_Class();
     }
 
-    public void setRotation(Vec3 rotation) {
+    public void setRotation(Vec3i rotation) {
         this.setPrefabData(this.prefabData.withRotation(rotation));
     }
 
-    public Vec3 getRotation() {
+    public Vec3i getRotation() {
         return this.prefabData.rotation();
     }
 

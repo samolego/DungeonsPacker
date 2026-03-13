@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Blocks;
@@ -72,7 +73,7 @@ public class PrefabEditScreen extends Screen {
         this.addWidget(this.nameEdit);
         var minPos = this.prefabBE.getRelativePos();
         this.posXEdit = new EditBox(this.font, this.width / 2 - offsetX, 80, width, 20, Component.translatable("structure_block.position.x"));
-        this.posXEdit.setMaxLength(15);
+        this.posXEdit.setMaxLength(8);
         this.posXEdit.setValue(Double.toString(minPos.x()));
         this.posXEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -81,7 +82,7 @@ public class PrefabEditScreen extends Screen {
         });
         this.addWidget(this.posXEdit);
         this.posYEdit = new EditBox(this.font, this.width / 2 - offsetX + width, 80, width, 20, Component.translatable("structure_block.position.y"));
-        this.posYEdit.setMaxLength(15);
+        this.posYEdit.setMaxLength(8);
         this.posYEdit.setValue(Double.toString(minPos.y()));
         this.posYEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -90,7 +91,7 @@ public class PrefabEditScreen extends Screen {
         });
         this.addWidget(this.posYEdit);
         this.posZEdit = new EditBox(this.font, this.width / 2 - offsetX + 2 * width, 80, width, 20, Component.translatable("structure_block.position.z"));
-        this.posZEdit.setMaxLength(15);
+        this.posZEdit.setMaxLength(8);
         this.posZEdit.setValue(Double.toString(minPos.z()));
         this.posZEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -100,7 +101,7 @@ public class PrefabEditScreen extends Screen {
         this.addWidget(this.posZEdit);
         var maxPos = this.prefabBE.getStructureScale();
         this.scaleXEdit = new EditBox(this.font, this.width / 2 - offsetX, 120, width, 20, Component.translatable("structure_block.size.x"));
-        this.scaleXEdit.setMaxLength(15);
+        this.scaleXEdit.setMaxLength(8);
         this.scaleXEdit.setValue(Double.toString(maxPos.x()));
         this.scaleXEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -109,7 +110,7 @@ public class PrefabEditScreen extends Screen {
         });
         this.addWidget(this.scaleXEdit);
         this.scaleYEdit = new EditBox(this.font, this.width / 2 - offsetX + width, 120, width, 20, Component.translatable("structure_block.size.y"));
-        this.scaleYEdit.setMaxLength(15);
+        this.scaleYEdit.setMaxLength(8);
         this.scaleYEdit.setValue(Double.toString(maxPos.y()));
         this.scaleYEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -118,7 +119,7 @@ public class PrefabEditScreen extends Screen {
         });
         this.addWidget(this.scaleYEdit);
         this.scaleZEdit = new EditBox(this.font, this.width / 2 - offsetX + 2 * width, 120, width, 20, Component.translatable("structure_block.size.z"));
-        this.scaleZEdit.setMaxLength(15);
+        this.scaleZEdit.setMaxLength(8);
         this.scaleZEdit.setValue(Double.toString(maxPos.z()));
         this.scaleZEdit.setResponder(value -> {
             // Parse number, then update blockEntity
@@ -129,27 +130,27 @@ public class PrefabEditScreen extends Screen {
 
 
         this.rotX = new EditBox(this.font, this.width / 2 - offsetX, 160, width, 20, Component.translatable("prefab_block.rotation.x"));
-        this.rotX.setMaxLength(15);
-        this.rotX.setValue(Double.toString(this.prefabBE.getRotation().x()));
+        this.rotX.setMaxLength(3);
+        this.rotX.setValue(Integer.toString(this.prefabBE.getRotation().getX()));
         this.rotX.setResponder(value -> {
-            var newX = this.parseDouble(value);
-            this.prefabBE.setRotation(new Vec3(newX, this.prefabBE.getRotation().y(), this.prefabBE.getRotation().z()));
+            var newX = this.parseInt(value);
+            this.prefabBE.setRotation(new Vec3i(newX, this.prefabBE.getRotation().getY(), this.prefabBE.getRotation().getZ()));
         });
         this.addWidget(this.rotX);
         this.rotY = new EditBox(this.font, this.width / 2 - offsetX + width, 160, width, 20, Component.translatable("prefab_block.rotation.y"));
-        this.rotY.setMaxLength(15);
-        this.rotY.setValue(Double.toString(this.prefabBE.getRotation().y()));
+        this.rotY.setMaxLength(3);
+        this.rotY.setValue(Integer.toString(this.prefabBE.getRotation().getY()));
         this.rotY.setResponder(value -> {
-            var newY = this.parseDouble(value);
-            this.prefabBE.setRotation(new Vec3(this.prefabBE.getRotation().x(), newY, this.prefabBE.getRotation().z()));
+            var newY = this.parseInt(value);
+            this.prefabBE.setRotation(new Vec3i(this.prefabBE.getRotation().getX(), newY, this.prefabBE.getRotation().getZ()));
         });
         this.addWidget(this.rotY);
         this.rotZ = new EditBox(this.font, this.width / 2 - offsetX + 2 * width, 160, width, 20, Component.translatable("prefab_block.rotation.z"));
-        this.rotZ.setMaxLength(15);
-        this.rotZ.setValue(Double.toString(this.prefabBE.getRotation().z()));
+        this.rotZ.setMaxLength(3);
+        this.rotZ.setValue(Integer.toString(this.prefabBE.getRotation().getZ()));
         this.rotZ.setResponder(value -> {
-            var newZ = this.parseDouble(value);
-            this.prefabBE.setRotation(new Vec3(this.prefabBE.getRotation().x(), this.prefabBE.getRotation().y(), newZ));
+            var newZ = this.parseInt(value);
+            this.prefabBE.setRotation(new Vec3i(this.prefabBE.getRotation().getX(), this.prefabBE.getRotation().getY(), newZ));
         });
         this.addWidget(this.rotZ);
     }
@@ -192,6 +193,15 @@ public class PrefabEditScreen extends Screen {
     private double parseDouble(final String value) {
         try {
             return Double.parseDouble(value);
+        } catch (NumberFormatException var3) {
+            return 0;
+        }
+    }
+
+
+    private int parseInt(String value) {
+        try {
+            return Integer.parseInt(value);
         } catch (NumberFormatException var3) {
             return 0;
         }
