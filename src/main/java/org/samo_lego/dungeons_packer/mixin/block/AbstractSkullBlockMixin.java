@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Mixin(AbstractSkullBlock.class)
 public class AbstractSkullBlockMixin implements IDungeonsConvertable {
@@ -28,7 +29,7 @@ public class AbstractSkullBlockMixin implements IDungeonsConvertable {
     private SkullBlock.Type type;
 
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, ArrayList<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         // We mixined into abstract skull to catch both wall skull and ground
         // placed skull block.
         if (this.type == Types.PLAYER) {

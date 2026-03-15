@@ -6,7 +6,8 @@ import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public interface IDungeonsConvertable {
-    short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, ArrayList<int[]> prefabs);
+    short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs);
 }

@@ -11,11 +11,12 @@ import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Mixin(AirBlock.class)
 public class AirBlockMixin implements IDungeonsConvertable {
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, ArrayList<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         return BlockMap.DUNGEONS_AIR;
     }
 }

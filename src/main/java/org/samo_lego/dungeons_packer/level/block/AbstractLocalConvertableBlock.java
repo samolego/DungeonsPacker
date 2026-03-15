@@ -14,6 +14,7 @@ import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AbstractLocalConvertableBlock extends Block implements IDungeonsConvertable {
     public AbstractLocalConvertableBlock(Properties properties) {
@@ -22,7 +23,7 @@ public abstract class AbstractLocalConvertableBlock extends Block implements IDu
 
 
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, ArrayList<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         // Check neighbour blocks
         var level = player.level();
         for (var direction : Direction.values()) {

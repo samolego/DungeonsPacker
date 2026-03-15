@@ -34,7 +34,6 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
         // Notify tile listener
         var tileListener = ((IDungeonsHandlerProvider) this.level).dungeons_packer$getDungeonsHandler();
         tileListener.onCornerRemoved(this);
-        tileListener.objectGroup.objects().remove(this);
     }
 
     @Override
@@ -83,6 +82,10 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
         return Optional.ofNullable(this.level.getBlockEntity(this.otherCorner) instanceof TileCornerBlockEntity be ? be : null);
     }
 
+    public Optional<BlockPos> getMatchingCornerPos() {
+        return Optional.ofNullable(this.otherCorner);
+    }
+
     @Override
     public Mode renderMode() {
         if (this.otherCorner == null || !this.isMainCorner() && this.level.isLoaded(this.otherCorner)) {
@@ -93,7 +96,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
 
     public boolean isMainCorner() {
         if (this.otherCorner == null) return false;
-        return this.otherCorner.compareTo(this.getBlockPos()) < 0;
+        return this.getBlockPos().compareTo(this.otherCorner) < 0;
     }
 
     @Override
@@ -149,7 +152,7 @@ public class TileCornerBlockEntity extends BlockEntity implements BoundingBoxRen
     public void setLevel(Level level) {
         super.setLevel(level);
         if (level instanceof ServerLevel && this.isMainCorner()) {
-            ((IDungeonsHandlerProvider) level).dungeons_packer$getDungeonsHandler().objectGroup.objects().add(this);
+            ((IDungeonsHandlerProvider) level).dungeons_packer$getDungeonsHandler().objectGroup.addTileCorner(this);
         }
     }
 }

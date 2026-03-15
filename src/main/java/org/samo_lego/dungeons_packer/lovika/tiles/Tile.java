@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public record Tile(
@@ -43,13 +44,16 @@ public record Tile(
     }
 
 
-    public static Optional<Tile> fromTileCornerBlock(ServerPlayer playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen) {
+    public static Optional<Tile> fromTileCornerBlock(ServerPlayer playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen, int index, Map<String, List<int[]>> prefabMap) {
+        // todo : check BlockPos#betweenClosed
         var tileBox = cornerBlockEntity.getRenderableBox();
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
         var doors = new ArrayList<Door>();
         var regions = new ArrayList<RegionLike>();
+        String name = String.format("tile%04d", index);
         var prefabs = new ArrayList<int[]>();
+        prefabMap.put(name, prefabs);
 
 
         int height = size.getY();
@@ -246,7 +250,7 @@ public record Tile(
         }
 
         return Optional.of(new Tile(
-                String.format("from_%s_to_%s", posToStr(pos), posToStr(pos.offset(size))),
+                name,
                 pos,
                 size,
                 encodedBlocks,
@@ -259,7 +263,4 @@ public record Tile(
         ));
     }
 
-    private static String posToStr(Vec3i pos) {
-        return String.format("x%d_y%d_z%d", pos.getX(), pos.getY(), pos.getZ());
-    }
 }

@@ -5,10 +5,16 @@ import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.samo_lego.dungeons_packer.event.EventHandler;
 import org.samo_lego.dungeons_packer.level.ModComponents;
 import org.samo_lego.dungeons_packer.level.block.ConverterBlockEntites;
 import org.samo_lego.dungeons_packer.level.block.ConverterBlocks;
@@ -52,5 +58,24 @@ public class DungeonsPacker implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(TextureDataC2SPacket.ID, ServerNetworkHandler::onClientTextureDataReceived);
 		ServerPlayNetworking.registerGlobalReceiver(FinishTextureDataC2SPacket.ID, ServerNetworkHandler::onClientTextureDataFinished);
 		ServerPlayNetworking.registerGlobalReceiver(UpdatePrefabC2SPacket.ID, ServerNetworkHandler::onUpdatePrefabReceived);
+
+		UseBlockCallback.EVENT.register((player, level, hand, blockHitResult) -> {
+			BlockPos blockPos = blockHitResult.getBlockPos().relative(blockHitResult.getDirection());
+			return EventHandler.onPlayerPlaceBlock(player, level, hand, blockPos);
+		});
+		UseItemCallback.EVENT.register((player, level, hand) -> {
+			HitResult hitResult = player.pick(5, 0, false);
+
+			BlockPos blockPos;
+			if (hitResult instanceof BlockHitResult blockHitResult) {
+                blockPos = blockHitResult.getBlockPos().relative(blockHitResult.getDirection());
+            } else {
+				var loc = hitResult.getLocation();
+				blockPos = BlockPos.containing(loc.x, loc.y, loc.z);
+			}
+
+			return EventHandler.onPlayerPlaceBlock(player, level, hand, blockPos);
+
+		});
 	}
 }

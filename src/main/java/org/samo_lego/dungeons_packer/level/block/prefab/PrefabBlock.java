@@ -22,6 +22,7 @@ import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertabl
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class PrefabBlock extends BaseEntityBlock implements IDungeonsConvertable {
     private static final MapCodec<PrefabBlock> CODEC = simpleCodec(PrefabBlock::new);
@@ -53,7 +54,7 @@ public class PrefabBlock extends BaseEntityBlock implements IDungeonsConvertable
     }
 
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, ArrayList<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         var be = player.level().getBlockEntity(absolutePos);
         if (be instanceof PrefabBlockEntity prefabBe) {
             var prefabData = prefabBe.getPrefabData();

@@ -6,7 +6,7 @@ public class BlockConstants {
     public static final byte BLOCK_DATA_MASK = 0b1111;
     public static final byte BLOCK_ID_MASK_SHIFT_COUNT = 4;
     public static final short BLOCK_ID_MASK = (short) 0xFFF0;
-    private static final String[] DUNGEONS_ID2STRING = new String[0x208 + 1];
+    private static final String[] DUNGEONS_ID2STRING = new String[559 + 1];
 
 
     public static Optional<String> getResourceStringId(int blockId) {

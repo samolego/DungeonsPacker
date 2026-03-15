@@ -28,7 +28,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 
@@ -54,7 +57,7 @@ public class DungeonsHandler {
 
     public DungeonsHandler(String levelName) {
         this.levelName = levelName;
-        this.objectGroup = new ObjectGroup(new HashSet<>());
+        this.objectGroup = new ObjectGroup();
         this.levelProperties = new DungeonLevel(levelName);
         this.textureCache = new Reference2ObjectOpenHashMap<>();
     }
@@ -72,7 +75,9 @@ public class DungeonsHandler {
             return;
         }
 
-        var tiles = this.objectGroup.getTiles(player, resourceGen);
+
+        var prefabs = new HashMap<String, List<int[]>>();
+        var tiles = this.objectGroup.getTiles(player, resourceGen, prefabs);
         if (tiles.length < 2) {
             executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_enough_tiles").withStyle(ChatFormatting.RED));
             return;
@@ -81,7 +86,17 @@ public class DungeonsHandler {
         var awaitingPackets = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
         this.finishExport = () -> {
             try {
-                PakExporter.writePak(executioner, outputFile, this.levelName, this.levelProperties, this.objectGroup, tiles, dump, resourceGen.getUsedTextures(), this.textureCache);
+                PakExporter.writePak(executioner,
+                        outputFile,
+                        this.levelName,
+                        this.levelProperties,
+                        this.objectGroup,
+                        tiles,
+                        dump,
+                        resourceGen.getUsedTextures(),
+                        this.textureCache,
+                        prefabs
+                );
 
                 var message = dump ? "commands.dungeons_packer.dump.success" : "commands.dungeons_packer.export.success";
                 executioner.sendSuccess(
@@ -126,9 +141,9 @@ public class DungeonsHandler {
             blockEntity.setMatchingCorner(this.cornerEntity.getBlockPos());
 
             if (this.cornerEntity.isMainCorner()) {
-                this.objectGroup.objects().add(this.cornerEntity);
+                this.objectGroup.addTileCorner(this.cornerEntity);
             } else {
-                this.objectGroup.objects().add(blockEntity);
+                this.objectGroup.addTileCorner(blockEntity);
             }
 
             this.cornerEntity = null;
@@ -138,24 +153,12 @@ public class DungeonsHandler {
     public void onCornerRemoved(TileCornerBlockEntity removed) {
         if (this.cornerEntity == removed) {
             this.cornerEntity = null;
-        } else if (this.cornerEntity != null) {
-            // We have to create a new matching pair
-            var matching = removed.getMatchingCorner();
-            if (matching.isEmpty()) {
-                DungeonsPacker.LOGGER.warn("Corner removed without matching corner set.");
-                return;
-            }
-
-            var otherCornerBE = matching.get();
-            otherCornerBE.setMatchingCorner(this.cornerEntity.getBlockPos());
-            this.cornerEntity.setMatchingCorner(matching.get().getBlockPos());
-            this.cornerEntity = null;
         } else {
-            // Set other corner of the removed box as current corner
-            removed.getMatchingCorner().ifPresent(be -> {
-                this.cornerEntity = be;
-                be.setMatchingCorner(null);
-            });
+            this.objectGroup.removeCorner(removed);
+            var matching = removed.getMatchingCorner().orElseThrow(() -> new IllegalStateException("Removed corner without matching corner"));
+            removed.setMatchingCorner(null);
+            matching.setMatchingCorner(null);
+            this.onCornerPlaced(matching);
         }
     }
 }

@@ -2,6 +2,7 @@ package org.samo_lego.dungeons_packer.lovika;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.world.level.block.state.BlockState;
+import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourcePackGenerator;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureEntry;
@@ -14,12 +15,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class PakExporter {
     private static final String OBJECTGROUP_PAK_PATH = "Dungeons/Content/data/lovika/objectgroups/{}/objectgroup.json";
     private static final String LEVEL_PAK_PATH = "Dungeons/Content/data/lovika/levels/{}.json";
+    private static final String XBLUEPRINT_PAK_PATH = String.format("Dungeons/%s/{}", DungeonsPacker.MOD_ID);
 
     public static void writePak(
             CommandSourceStack executioner,
@@ -29,7 +32,8 @@ public class PakExporter {
             Tile[] tiles,
             boolean dump,
             Map<BlockState, TextureEntry> usedTextures,
-            Map<BlockState, TextureBytes> textureCache
+            Map<BlockState, TextureBytes> textureCache,
+            HashMap<String, List<int[]>> prefabs
     ) throws IOException, GeneralSecurityException {
         byte[] objectgroupJson = objectGroup.generateJson(tiles).getBytes();
         byte[] levelJson = dungeonLevel.generateJson(tiles).getBytes();
@@ -42,6 +46,8 @@ public class PakExporter {
         builder.addFile(levelPakPath, levelJson);
 
         ResourcePackGenerator.addTextures(builder, usedTextures, textureCache, executioner.getLevel());
+
+        writeBlueprintsData(builder, prefabs);
 
         builder.finish();
 
@@ -58,5 +64,9 @@ public class PakExporter {
                 }
             }
         }
+    }
+
+    private static void writeBlueprintsData(PakBuilder builder, HashMap<String, List<int[]>> prefabs) {
+        // todo
     }
 }
