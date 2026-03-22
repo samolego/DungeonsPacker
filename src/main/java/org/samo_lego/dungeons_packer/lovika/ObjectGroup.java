@@ -44,7 +44,7 @@ public class ObjectGroup {
         }
 
         // Todo - sort by doors
-        Arrays.sort(tiles, (tile1, tile2) -> Utils.compareXZY(tile1.pos(), tile2.pos()));
+        //Arrays.sort(tiles, (tile1, tile2) -> Utils.compareXZY(tile1.pos(), tile2.pos()));
 
         return tiles;
     }
