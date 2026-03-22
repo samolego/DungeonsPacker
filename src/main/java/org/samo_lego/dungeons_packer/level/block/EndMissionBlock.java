@@ -1,7 +1,7 @@
 package org.samo_lego.dungeons_packer.level.block;
 
 public class EndMissionBlock extends AbstractLocalConvertableBlock {
-    public static final String END = "end";
+    public static final String END = "end_trigger_objective";
 
     public EndMissionBlock(Properties properties) {
         super(properties);

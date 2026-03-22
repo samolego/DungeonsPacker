@@ -1,8 +1,11 @@
-package org.samo_lego.dungeons_packer.lovika;
+package org.samo_lego.dungeons_packer.lovika.paking;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
+import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
+import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
+import org.samo_lego.dungeons_packer.lovika.paking.cooked.CookedResourceWriter;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.ResourcePackGenerator;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureEntry;
@@ -11,10 +14,15 @@ import org.samo_lego.japak.PakBuilder;
 import org.samo_lego.japak.PakUnpacker;
 import org.samo_lego.japak.structs.PakVersion;
 
+import javax.imageio.ImageIO;
+import java.awt.color.*;
+import java.awt.image.*;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +30,6 @@ import java.util.Map;
 public class PakExporter {
     private static final String OBJECTGROUP_PAK_PATH = "Dungeons/Content/data/lovika/objectgroups/{}/objectgroup.json";
     private static final String LEVEL_PAK_PATH = "Dungeons/Content/data/lovika/levels/{}.json";
-    private static final String XBLUEPRINT_PAK_PATH = String.format("Dungeons/%s/{}", DungeonsPacker.MOD_ID);
 
     public static void writePak(
             CommandSourceStack executioner,
@@ -67,6 +74,64 @@ public class PakExporter {
     }
 
     private static void writeBlueprintsData(PakBuilder builder, HashMap<String, List<int[]>> prefabs) {
-        // todo
+        CookedResourceWriter.writeTiles(builder, "archhaven", prefabs.keySet());
+
+        for (var entry : prefabs.entrySet()) {
+            var tileId = entry.getKey();
+            var pixelRows = entry.getValue();
+
+            if (!pixelRows.isEmpty()) {
+                var image = getImage2(pixelRows);
+                // Convert the image to bytes
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    ImageIO.write(image, "png", baos);
+                    byte[] imageBytes = baos.toByteArray();
+
+                    String path = String.format("Dungeons/Content/%s/%s.png", DungeonsPacker.MOD_ID, tileId);
+                    builder.addFile(path, imageBytes);
+
+                } catch (IOException | NoSuchAlgorithmException e) {
+                    DungeonsPacker.LOGGER.error("Error writing blueprint texture for tile {}: {}", tileId, e.getLocalizedMessage());
+                }
+            }
+        }
+    }
+
+    private static BufferedImage getImage(List<int[]> pixelRows) {
+        int width = 4;
+        int height = pixelRows.size();
+
+        var image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
+        for (int y = 0; y < height; y++) {
+            int[] row = pixelRows.get(y);
+            for (int x = 0; x < width; x++) {
+                image.setRGB(x, y, row[x]);
+            }
+        }
+        return image;
+    }
+    private static BufferedImage getImage2(List<int[]> pixelRows) {
+        int width = 4;
+        int height = pixelRows.size();
+
+        // We use a custom color model to prevent ImageIO from applying sRGB/Gamma shifts
+        // This treats the image as a raw data array.
+        var colorModel = new DirectColorModel(
+                ColorSpace.getInstance(ColorSpace.CS_sRGB),
+                32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000,
+                false, DataBuffer.TYPE_INT);
+
+        var raster = colorModel.createCompatibleWritableRaster(width, height);
+        var image = new BufferedImage(colorModel, raster, false, null);
+
+        for (int y = 0; y < height; y++) {
+            int[] row = pixelRows.get(y);
+            for (int x = 0; x < width; x++) {
+                // Note: Use the raster directly to avoid any color model interference
+                image.setRGB(x, y, row[x]);
+            }
+        }
+        return image;
     }
 }

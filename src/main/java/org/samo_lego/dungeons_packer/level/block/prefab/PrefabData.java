@@ -7,11 +7,9 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.samo_lego.dungeons_packer.DungeonsPacker;
 
 import java.util.Optional;
 
@@ -102,63 +100,76 @@ public record PrefabData(
             return new PrefabData(bpClass, relativePos, scale, rotation);
         }).orElseGet(PrefabData::getDefault);
     }
+
     /**
      * Encodes prefab data into 4 pixels (represented as ARGB integers).
-     * Scale is multiplied by 100 to preserve 2 decimal places in 1 byte (0.00 to 2.55).
-     * Coordinates are cast to short (0-65535 range).
      */
-    public Optional<int[]> encodeToPixels(BlockPos worldPos) {
-        int[] pixels = new int[9];
+    public Optional<int[]> encodeToPixels(BlockPos offsetPos) {
+        int[] pixels = new int[4];
 
-        // 1. Metadata & World Position (Pixel 0 & 1)
+        // Metadata & World Position (Pixels 0 & 1)
         int index = PrefabRegistry.PREFAB_NAME_TO_INDEX.getOrDefault(this.BP_Class, -1);
         if (index == -1) {
             return Optional.empty();
         }
 
-        int wx = worldPos.getX();
-        int wy = worldPos.getY();
-        int wz = worldPos.getZ();
+        // Clamp positions to 16-bit range (0-65535)
+        int wz = Math.max(0, Math.min(65535, offsetPos.getZ()));
+        int wx = Math.max(0, Math.min(65535, offsetPos.getX()));
+        int wy = Math.max(0, Math.min(65535, offsetPos.getY()));
 
-        // Pixel 0: [R:IdxH, G:IdxL] [B:WzH, A:WzL]
-        pixels[0] = packUnrealRGBA((index >> 8), index, (wz >> 8), wz);
-        // Pixel 1: [R:WxH, G:WxL] [B:WyH, A:WyL]
-        pixels[1] = packUnrealRGBA((wx >> 8), wx, (wy >> 8), wy);
+        // Pixel 0: index, y (height)
+        pixels[0] = packRGBA((index >> 8), index, (wy >> 8), wy);
 
-        // Relative Position (Pixel 2)
-        // Range 0-100, stored as (val * 100) in 1 byte each
-        int rx = (int) Math.round(this.relativePos.x * 100);
-        int ry = (int) Math.round(this.relativePos.y * 100);
-        int rz = (int) Math.round(this.relativePos.z * 100);
-        pixels[2] = packUnrealRGBA(rx, ry, rz, 0);
+        // Pixel 1: x, z
+        pixels[1] = packRGBA((wx >> 8), wx, (wz >> 8), wz);
 
-        // 3. Scale (Pixels 3, 4, 5) - Full 32-bit Floats
-        pixels[3] = packFloatToPixel((float)this.scale.x);
-        pixels[4] = packFloatToPixel((float)this.scale.y);
-        pixels[5] = packFloatToPixel((float)this.scale.z);
+        // Rotations (Pixel 2) - Packed as 10-bit triplet
+        pixels[2] = pack10BitTriplet(
+                (this.rotation.getX() % 360 + 360) % 360,
+                (this.rotation.getZ() % 360 + 360 ) % 360,
+                (this.rotation.getY() % 360 + 360 ) % 360
+        );
 
-        // 4. Rotation (Pixels 6, 7, 8) - Full 32-bit Floats
-        pixels[6] = packFloatToPixel((float)this.rotation.getX());
-        pixels[7] = packFloatToPixel((float)this.rotation.getY());
-        pixels[8] = packFloatToPixel((float)this.rotation.getZ());
+        // Scale (Pixel 3) - Multiplied by 100 and packed as 10-bit triplet
+        pixels[3] = pack10BitTriplet(
+                (int) Math.round(this.scale.x * 100),
+                (int) Math.round(this.scale.z * 100),
+                (int) Math.round(this.scale.y * 100)
+        );
 
         return Optional.of(pixels);
     }
 
-    private int packFloatToPixel(float val) {
-        int bits = Float.floatToRawIntBits(val);
-        // Split 32 bits into R, G, B, A (8 bits each)
-        return packUnrealRGBA(
-                (bits >> 24) & 0xFF,  // R
-                (bits >> 16) & 0xFF,  // G
-                (bits >> 8) & 0xFF,  // B
-                bits & 0xFF  // A
-        );
+    /**
+     * Packs three 10-bit numbers into one 32-bit ARGB integer.
+     * Matches Python pack_10bit_triplet logic.
+     */
+    private int pack10BitTriplet(int v1, int v2, int v3) {
+        // Ensure values are in 10-bit range (0-1023)
+        v1 = Math.max(0, Math.min(1023, v1));
+        v2 = Math.max(0, Math.min(1023, v2));
+        v3 = Math.max(0, Math.min(1023, v3));
+
+        // Byte 1 (R): Top 8 bits of V1
+        int r = (v1 >> 2) & 0xFF;
+
+        // Byte 2 (G): Bottom 2 bits of V1 | Top 6 bits of V2
+        int g = ((v1 & 0x03) << 6) | ((v2 >> 4) & 0x3F);
+
+        // Byte 3 (B): Bottom 4 bits of V2 | Top 4 bits of V3
+        int b = ((v2 & 0x0F) << 4) | ((v3 >> 6) & 0x0F);
+
+        // Byte 4 (A): Bottom 6 bits of V3 | 2 Unused bits
+        int a = (v3 & 0x3F) << 2;
+
+        return packRGBA(r, g, b, a);
     }
 
-    private int packUnrealRGBA(int r, int g, int b, int a) {
-        // Java Int format: 0xAARRGGBB
+    /**
+     * Packs R, G, B, A components into a single Java ARGB int (0xAARRGGBB).
+     */
+    private int packRGBA(int r, int g, int b, int a) {
         return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
     }
-
 }

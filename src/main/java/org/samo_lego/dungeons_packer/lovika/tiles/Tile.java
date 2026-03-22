@@ -34,16 +34,6 @@ public record Tile(
         List<Door> doors,
         List<RegionLike> regions
 ) {
-    public Tile {
-        if (doors == null) {
-            doors = new ArrayList<>();
-        }
-        if (regions == null) {
-            regions = new ArrayList<>();
-        }
-    }
-
-
     public static Optional<Tile> fromTileCornerBlock(ServerPlayer playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen, int index, Map<String, List<int[]>> prefabMap) {
         // todo : check BlockPos#betweenClosed
         var tileBox = cornerBlockEntity.getRenderableBox();
@@ -51,7 +41,7 @@ public record Tile(
         var size = tileBox.size();
         var doors = new ArrayList<Door>();
         var regions = new ArrayList<RegionLike>();
-        String name = String.format("tile%04d", index);
+        String name = String.format("tile%03d", index);
         var prefabs = new ArrayList<int[]>();
         prefabMap.put(name, prefabs);
 

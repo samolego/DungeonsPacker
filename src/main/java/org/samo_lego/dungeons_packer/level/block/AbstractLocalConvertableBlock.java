@@ -43,14 +43,16 @@ public abstract class AbstractLocalConvertableBlock extends Block implements IDu
         while (level.getBlockState(absolutePos.offset(x, y, z)).is(this)) {
             y++;
         }
-        while (level.getBlockState(absolutePos.offset(x, y - 1, z)).is(this)) {
+        y -= 1;
+        while (level.getBlockState(absolutePos.offset(x, y, z)).is(this)) {
             z++;
         }
-        while (level.getBlockState(absolutePos.offset(x, y - 1, z - 1)).is(this)) {
+        z -= 1;
+        while (level.getBlockState(absolutePos.offset(x, y, z)).is(this)) {
             x++;
         }
 
-        var size = new Vec3i(x, y, z);
+        var size = new Vec3i(x, y + 1, z + 1);
         regions.add(new Region(relativePos, size, this.regionName(), this.regionTags(), Region.Type.TRIGGER));
 
         return BlockMap.DUNGEONS_AIR;

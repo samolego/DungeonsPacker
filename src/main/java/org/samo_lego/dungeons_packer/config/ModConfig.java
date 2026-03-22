@@ -8,6 +8,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.Strictness;
 import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import net.fabricmc.loader.api.FabricLoader;
@@ -50,6 +51,10 @@ public class ModConfig {
     @JsonAdapter(BlockSetAdapter.class)
     public Set<Block> forced_blocks = new TreeSet<>(Comparator.comparing(b -> BuiltInRegistries.BLOCK.wrapAsHolder(b).getRegisteredName()));
 
+    @SerializedName("// Where to export the pak file. If empty, will export to world folder.")
+    public String _comment_exportFolder = "";
+    public String exportFolder = "$HOME/.local/share/Steam/steamapps/common/MinecraftDungeons/Dungeons/Content/Paks/~mods/";
+
     public static ModConfig getInstance() {
         return ModConfig.INSTANCE;
     }
@@ -61,6 +66,10 @@ public class ModConfig {
         } catch (IOException e) {
             DungeonsPacker.LOGGER.error("Problem occurred when saving config: {}", e.getMessage());
         }
+    }
+
+    public ModConfig() {
+        // Detect windows - linux and assign exportFolder
     }
 
     static {

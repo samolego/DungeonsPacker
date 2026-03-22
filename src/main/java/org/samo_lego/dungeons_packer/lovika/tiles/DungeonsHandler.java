@@ -14,7 +14,7 @@ import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
-import org.samo_lego.dungeons_packer.lovika.PakExporter;
+import org.samo_lego.dungeons_packer.lovika.paking.PakExporter;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
@@ -28,9 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 

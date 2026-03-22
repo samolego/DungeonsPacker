@@ -3,12 +3,16 @@ package org.samo_lego.dungeons_packer.lovika;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
+import org.samo_lego.dungeons_packer.level.block.EndMissionBlock;
 import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
+import org.samo_lego.dungeons_packer.lovika.region.Region;
+import org.samo_lego.dungeons_packer.lovika.region.Region.Type;
 import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
 import org.samo_lego.dungeons_packer.lovika.tiles.Tile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +42,9 @@ public class ObjectGroup {
             }
             ++i;
         }
+
+        // Todo - sort by doors
+        Arrays.sort(tiles, (tile1, tile2) -> Utils.compareXZY(tile1.pos(), tile2.pos()));
 
         return tiles;
     }
