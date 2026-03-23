@@ -53,12 +53,16 @@ public abstract class AbstractLocalConvertableBlock extends Block implements IDu
         }
 
         var size = new Vec3i(x, y + 1, z + 1);
-        regions.add(new Region(relativePos, size, this.regionName(), this.regionTags(), Region.Type.TRIGGER));
+        var door = this.getDoorOrRegion(relativePos, size);
+        if (door instanceof RegionLike region) {
+            regions.add(region);
+        } else {
+            doors.add(door);
+        }
 
         return BlockMap.DUNGEONS_AIR;
     }
 
-    protected abstract String regionTags();
 
-    protected abstract String regionName();
+    protected abstract Door getDoorOrRegion(BlockPos relativePos, Vec3i size);
 }

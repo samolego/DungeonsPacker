@@ -1,6 +1,9 @@
 package org.samo_lego.dungeons_packer.level.item;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResult.Success;
@@ -9,17 +12,19 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundSource;
+import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
+
+import static org.samo_lego.dungeons_packer.level.block.ConverterBlocks.TILE_CORNER_BLOCK;
 
 public class TileCornerBlockItem extends BlockItem {
-    public TileCornerBlockItem(Block block, Properties properties) {
-        super(block, properties);
+    public TileCornerBlockItem(Properties properties) {
+        super(TILE_CORNER_BLOCK, properties);
     }
 
     @Override
@@ -29,12 +34,27 @@ public class TileCornerBlockItem extends BlockItem {
         // Raycast to check if we are looking at a block
         BlockHitResult hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.NONE);
 
-        if (hitResult.getType() == HitResult.Type.MISS) {
-            Vec3 lookAngle = player.getLookAngle();
-            BlockPos targetPos = BlockPos.containing(player.getEyePosition().add(lookAngle.scale(player.blockInteractionRange())));
+        if (level instanceof ServerLevel slevel) {
+            var blockPos = hitResult.getBlockPos();
+            var handler = ((IDungeonsHandlerProvider) slevel).dungeons_packer$getDungeonsHandler();
 
-            if (level.getBlockState(targetPos).canBeReplaced()) {
-                if (!level.isClientSide()) {
+            var result =  handler.objectGroup
+                    .getTileCornerContaining(blockPos)
+                    .<InteractionResult>map(_ -> {
+                        player.sendOverlayMessage(Component.translatable("message.dungeons_packer.cannot_place_in_tile")
+                                .withStyle(ChatFormatting.RED)
+                        );
+                        return InteractionResult.FAIL;
+                    });
+            if (result.isPresent()) {
+                return result.get();
+            }
+
+            if (hitResult.getType() == HitResult.Type.MISS) {
+                Vec3 lookAngle = player.getLookAngle();
+                BlockPos targetPos = BlockPos.containing(player.getEyePosition().add(lookAngle.scale(player.blockInteractionRange())));
+
+                if (level.getBlockState(targetPos).canBeReplaced()) {
                     BlockState state = this.getBlock().defaultBlockState();
 
                     if (level.setBlock(targetPos, state, 11)) {
@@ -46,10 +66,15 @@ public class TileCornerBlockItem extends BlockItem {
                             itemStack.shrink(1);
                         }
                     }
+                    return Success.SUCCESS_SERVER;
                 }
-                return Success.SUCCESS_SERVER;
             }
         }
+
+
+
+
+
 
         return super.use(level, player, hand);
     }

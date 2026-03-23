@@ -21,15 +21,15 @@ public class ConverterBlocks {
 
 	public static final Block TILE_DOOR_BLOCK = register(
 			"tile_door",
-			Block::new,
-			BlockBehaviour.Properties.of().sound(SoundType.STONE),
-			true
+			TileDoorBlock::new,
+			BlockBehaviour.Properties.of().noCollision().sound(SoundType.WOOD),
+			false
 	);
 
 	public static final Block END_MISSION_BLOCK = register(
 			"end_mission",
 			EndMissionBlock::new,
-			BlockBehaviour.Properties.of().noCollision().sound(SoundType.AMETHYST),
+			BlockBehaviour.Properties.of().noCollision().sound(SoundType.GLASS),
 			true
 	);
 
@@ -45,7 +45,7 @@ public class ConverterBlocks {
 	public static final Block PREFAB_BLOCK = register(
 			"prefab",
 			PrefabBlock::new,
-			BlockBehaviour.Properties.of().noCollision().sound(SoundType.SUSPICIOUS_SAND),
+			BlockBehaviour.Properties.of().noCollision().sound(SoundType.AMETHYST),
 			false
 	);
 

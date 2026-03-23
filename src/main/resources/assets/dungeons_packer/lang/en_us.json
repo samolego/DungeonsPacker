@@ -1,5 +1,6 @@
 {
   "block.dungeons_packer.tile_corner": "Tile Corner",
+  "block.dungeons_packer.tile_door": "Tile Door",
   "block.dungeons_packer.end_mission": "End Mission",
   "block.dungeons_packer.prefab": "Prefab",
   "prefab_block.rotation": "Rotation",
@@ -21,5 +22,7 @@
   "command.dungeons_packer.recreate_block_mappings.success": "Successfully reregistered block mappings!",
   "itemGroup.dungeons_packer_generated": "Generated Prefabs",
   "message.dungeons_packer.prefab_conversion_failed": "Prefab conversion at %s failed. Unknown id: %s",
-  "message.dungeons_packer.cannot_place_in_tile": "Cannot place this block in existing tile."
+  "message.dungeons_packer.cannot_place_in_tile": "Cannot place this block in existing tile.",
+  "message.dungeons_packer.door_place.on_side": "You must place this block at the side of a tile!",
+  "message.dungeons_packer.door_place.in_tile": "Create a tile using %s first!"
 }

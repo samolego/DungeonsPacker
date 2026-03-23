@@ -105,6 +105,7 @@ public record PrefabData(
      * Encodes prefab data into 4 pixels (represented as ARGB integers).
      */
     public Optional<int[]> encodeToPixels(BlockPos offsetPos) {
+        var pos = this.relativePos.add(Vec3.atLowerCornerOf(offsetPos));
         int[] pixels = new int[4];
 
         // Metadata & World Position (Pixels 0 & 1)
@@ -114,9 +115,9 @@ public record PrefabData(
         }
 
         // Clamp positions to 16-bit range (0-65535)
-        int wz = Math.max(0, Math.min(65535, offsetPos.getZ()));
-        int wx = Math.max(0, Math.min(65535, offsetPos.getX()));
-        int wy = Math.max(0, Math.min(65535, offsetPos.getY()));
+        int wz = (int) Math.max(0, Math.min(65535, pos.z()));
+        int wx = (int) Math.max(0, Math.min(65535, pos.x()));
+        int wy = (int) Math.max(0, Math.min(65535, pos.y()));
 
         // Pixel 0: index, y (height)
         pixels[0] = packRGBA((index >> 8), index, (wy >> 8), wy);

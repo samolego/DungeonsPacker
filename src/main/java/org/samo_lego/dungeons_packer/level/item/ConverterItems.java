@@ -7,32 +7,35 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
-import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.phys.Vec3;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.level.ModComponents;
 import org.samo_lego.dungeons_packer.level.block.prefab.PrefabData;
 
 import java.util.function.Function;
 
-import static org.samo_lego.dungeons_packer.level.block.ConverterBlocks.PREFAB_BLOCK;
-import static org.samo_lego.dungeons_packer.level.block.ConverterBlocks.TILE_CORNER_BLOCK;
-
 public class ConverterItems {
 
     public static final Item TILE_CORNER_BLOCK_ITEM = register(
             "tile_corner",
-            settings -> new TileCornerBlockItem(TILE_CORNER_BLOCK, settings),
+            TileCornerBlockItem::new,
             new Item.Properties().useBlockDescriptionPrefix()
     );
 
+    public static final Item TILE_DOOR_BLOCK_ITEM = register(
+            "tile_door",
+            TileDoorBlockItem::new,
+            new Item.Properties().useBlockDescriptionPrefix()
+    );
+
+
     public static final Item PREFAB_BLOCK_ITEM = register(
             "prefab",
-            settings -> new PrefabBlockItem(PREFAB_BLOCK, settings),
+            PrefabBlockItem::new,
             new Item.Properties()
                     .useBlockDescriptionPrefix()
                     .component(ModComponents.PREFAB_DATA, PrefabData.getDefault())
     );
+
 
     public static <GenericItem extends Item> GenericItem register(String name, Function<Properties, GenericItem> itemFactory, Item.Properties settings) {
         // Create the item key.

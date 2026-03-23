@@ -26,7 +26,7 @@ public class CreativeTabs {
             .icon(() -> new ItemStack(ConverterItems.TILE_CORNER_BLOCK_ITEM))
             .title(Component.translatable("itemGroup.dungeons_packer"))
             .displayItems((params, output) -> {
-                output.accept(ConverterBlocks.TILE_DOOR_BLOCK);
+                output.accept(ConverterItems.TILE_DOOR_BLOCK_ITEM);
                 output.accept(ConverterBlocks.END_MISSION_BLOCK);
                 output.accept(ConverterItems.TILE_CORNER_BLOCK_ITEM);
 

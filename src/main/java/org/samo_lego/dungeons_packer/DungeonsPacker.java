@@ -63,19 +63,5 @@ public class DungeonsPacker implements ModInitializer {
 			BlockPos blockPos = blockHitResult.getBlockPos().relative(blockHitResult.getDirection());
 			return EventHandler.onPlayerPlaceBlock(player, level, hand, blockPos);
 		});
-		UseItemCallback.EVENT.register((player, level, hand) -> {
-			HitResult hitResult = player.pick(5, 0, false);
-
-			BlockPos blockPos;
-			if (hitResult instanceof BlockHitResult blockHitResult) {
-                blockPos = blockHitResult.getBlockPos().relative(blockHitResult.getDirection());
-            } else {
-				var loc = hitResult.getLocation();
-				blockPos = BlockPos.containing(loc.x, loc.y, loc.z);
-			}
-
-			return EventHandler.onPlayerPlaceBlock(player, level, hand, blockPos);
-
-		});
 	}
 }
