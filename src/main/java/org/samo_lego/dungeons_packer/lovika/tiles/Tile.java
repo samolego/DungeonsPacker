@@ -90,7 +90,7 @@ public record Tile(
 
                         // Do the block conversion
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), doors, regions, prefabs);
+                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), width, depth, doors, regions, prefabs);
                         } else {
                             //var ids = BlockMap.toDungeonBlockId(blockState);
                             var ids = resourceGen.requestId(blockState, playerConverting);

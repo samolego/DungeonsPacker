@@ -19,7 +19,7 @@ import java.util.List;
 @Mixin(StructureBlock.class)
 public class StructureBlockMixin implements IDungeonsConvertable {
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos absolutePos, BlockPos relativePos, int width, int depth, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         var blockEntity = player.level().getBlockEntity(absolutePos);
         if (blockEntity instanceof StructureBlockEntity sbe) {
             var structName = sbe.getStructureName();

@@ -3,15 +3,10 @@ package org.samo_lego.dungeons_packer.level.block.corner;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
 import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
@@ -50,7 +45,7 @@ public class TileCornerBlock extends BaseEntityBlock implements IDungeonsConvert
     }
 
     @Override
-    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos currentPos, BlockPos relativePos, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
+    public short dungeons_packer$convertToDungeons(DungeonBlockIdProvider blockIdProvider, ServerPlayer player, BlockPos currentPos, BlockPos relativePos, int width, int depth, ArrayList<Door> doors, ArrayList<RegionLike> regions, List<int[]> prefabs) {
         return BlockMap.DUNGEONS_AIR;
     }
 }
