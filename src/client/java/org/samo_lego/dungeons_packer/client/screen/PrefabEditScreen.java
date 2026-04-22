@@ -2,7 +2,7 @@ package org.samo_lego.dungeons_packer.client.screen;
 
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -225,28 +225,28 @@ public class PrefabEditScreen extends Screen {
     }
 
     @Override
-    public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-        super.render(graphics, mouseX, mouseY, a);
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, 10, -1);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, this.title, this.width / 2, 10, -1);
 
         int offsetX = 200;
-        graphics.drawString(this.font, NAME_LABEL, this.width / 2 - offsetX, 30, -6250336);
-        this.nameEdit.render(graphics, mouseX, mouseY, a);
+        graphics.text(this.font, NAME_LABEL, this.width / 2 - offsetX, 30, -6250336);
+        this.nameEdit.extractRenderState(graphics, mouseX, mouseY, a);
 
-        graphics.drawString(this.font, POSITION_LABEL, this.width / 2 - offsetX, 70, -6250336);
-        this.posXEdit.render(graphics, mouseX, mouseY, a);
-        this.posYEdit.render(graphics, mouseX, mouseY, a);
-        this.posZEdit.render(graphics, mouseX, mouseY, a);
+        graphics.text(this.font, POSITION_LABEL, this.width / 2 - offsetX, 70, -6250336);
+        this.posXEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        this.posYEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        this.posZEdit.extractRenderState(graphics, mouseX, mouseY, a);
 
-        graphics.drawString(this.font, SIZE_LABEL, this.width / 2 - offsetX, 110, -6250336);
-        this.scaleXEdit.render(graphics, mouseX, mouseY, a);
-        this.scaleYEdit.render(graphics, mouseX, mouseY, a);
-        this.scaleZEdit.render(graphics, mouseX, mouseY, a);
+        graphics.text(this.font, SIZE_LABEL, this.width / 2 - offsetX, 110, -6250336);
+        this.scaleXEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        this.scaleYEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        this.scaleZEdit.extractRenderState(graphics, mouseX, mouseY, a);
 
-        graphics.drawString(this.font, ROTATION_LABEL, this.width / 2 - offsetX, 150, -6250336);
-        this.rotX.render(graphics, mouseX, mouseY, a);
-        this.rotY.render(graphics, mouseX, mouseY, a);
-        this.rotZ.render(graphics, mouseX, mouseY, a);
+        graphics.text(this.font, ROTATION_LABEL, this.width / 2 - offsetX, 150, -6250336);
+        this.rotX.extractRenderState(graphics, mouseX, mouseY, a);
+        this.rotY.extractRenderState(graphics, mouseX, mouseY, a);
+        this.rotZ.extractRenderState(graphics, mouseX, mouseY, a);
     }
 
     @Override
@@ -260,6 +260,6 @@ public class PrefabEditScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) { }
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) { }
 }
 

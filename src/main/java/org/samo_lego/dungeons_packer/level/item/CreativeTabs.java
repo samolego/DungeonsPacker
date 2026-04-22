@@ -15,6 +15,7 @@ import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.level.ModComponents;
 import org.samo_lego.dungeons_packer.level.block.ConverterBlocks;
 import org.samo_lego.dungeons_packer.level.block.prefab.PrefabData;
+import org.samo_lego.dungeons_packer.level.item.mobs.DungeonMobRegistry;
 
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class CreativeTabs {
                 output.accept(ConverterItems.TILE_DOOR_BLOCK_ITEM);
                 output.accept(ConverterBlocks.END_MISSION_BLOCK);
                 output.accept(ConverterItems.TILE_CORNER_BLOCK_ITEM);
+                output.accept(ConverterBlocks.MOBS_AREA_BLOCK);
 
                 // And custom ItemStacks
                 ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
@@ -72,8 +74,38 @@ public class CreativeTabs {
                 })
                 .build();
 
+
+    public static final ResourceKey<CreativeModeTab> DUNGEONS_CREATIVE_TAB_MONSTER_KEY = ResourceKey.create(BuiltInRegistries.CREATIVE_MODE_TAB.key(), Identifier.fromNamespaceAndPath(DungeonsPacker.MOD_ID, "creative_mobs_tab"));
+    public static final CreativeModeTab DUNGEONS_CREATIVE_MONSTER_TAB = CreativeModeTab.builder(Row.BOTTOM, 0)
+            .icon(() -> new ItemStack(Items.ZOMBIE_HEAD))
+            .title(Component.translatable("itemGroup.dungeons_packer_mobs"))
+            .displayItems((params, output) -> {
+                output.acceptAll(DungeonMobRegistry.MOBS.entrySet().stream().map(entry -> {
+                    var id = entry.getKey();
+                    var name = entry.getValue();
+                    var stack = new ItemStack(ConverterItems.DUNGEON_MONSTER_SPAWN_EGG_ITEM);
+
+                    // Make the name nicer (from pascal case to normal)
+                    StringBuilder displayName = new StringBuilder();
+                    for (int i = 0; i < name.length(); i++) {
+                        char c = name.charAt(i);
+                        if (i > 1 && Character.isUpperCase(c) && Character.isLowerCase(name.charAt(i - 1))) {
+                            displayName.append(' ');
+                        }
+                        displayName.append(c);
+                    }
+
+                    stack.set(DataComponents.CUSTOM_NAME, Component.literal(displayName.toString()));
+                    stack.set(ModComponents.MONSTER_DATA, id);
+
+                    return stack;
+                }).toList());
+            })
+            .build();
+
     public static void initialize() {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_KEY, DUNGEONS_CREATIVE_TAB);
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_PREFAB_KEY, DUNGEONS_CREATIVE_PREFAB_TAB);
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_MONSTER_KEY, DUNGEONS_CREATIVE_MONSTER_TAB);
     }
 }

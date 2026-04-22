@@ -2,10 +2,11 @@ package org.samo_lego.dungeons_packer.client.render;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.texture.SpriteContents;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
@@ -18,6 +19,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+This was mostly written by AI. I need a rendering expert to help me make this better. Feel free to open a PR!
+ */
 public class BlockRenderer {
     private static final BlockRenderer instance = new BlockRenderer();
 
@@ -39,13 +43,15 @@ public class BlockRenderer {
 
 
     public byte[] captureSideRaw(BlockState state, Direction side, Minecraft client) {
-        BlockStateModel blockModel = client.getBlockRenderer().getBlockModel(state);
-        var random = RandomSource.create(42L);
-        List<BlockModelPart> parts = blockModel.collectParts(random);
+        BlockStateModel blockModel = client.getModelManager().getBlockStateModelSet().get(state);
 
-        // 1. Collect all layers for this side
+        var random = RandomSource.create(42L);
+        List<BlockStateModelPart> parts = new ArrayList<>();
+        blockModel.collectParts(random, parts);
+
+        // Collect all layers for this side
         List<BakedQuad> layers = new ArrayList<>();
-        for (BlockModelPart part : parts) {
+        for (BlockStateModelPart part : parts) {
             List<BakedQuad> quads = part.getQuads(side);
             if (quads.isEmpty()) quads = part.getQuads(null);
             layers.addAll(quads);
@@ -53,22 +59,22 @@ public class BlockRenderer {
 
         if (layers.isEmpty()) return new byte[0];
 
-        // 2. Create a canvas
-        int size = layers.getFirst().spriteInfo().sprite().contents().width();
+        // Create a canvas
+        int size = layers.getFirst().materialInfo().sprite().contents().width();
         try (NativeImage canvas = new NativeImage(size, size, true)) {
 
             for (BakedQuad quad : layers) {
-                var contents = quad.spriteInfo().sprite().contents();
+                var contents = quad.materialInfo().sprite().contents();
 
-                // 3. Extract pixels from the Atlas (Core logic)
+                // Extract pixels from the Atlas (Core logic)
                 try (NativeImage spritePixels = extractSprite(contents)) {
                     int tint = -1;
-                    if (quad.isTinted()) {
+                    if (quad.materialInfo().isTinted()) {
                         // Get the biome color at player's location
-                        tint = client.getBlockColors().getColor(state, client.level, client.player.blockPosition(), quad.tintIndex());
+                        tint = client.getBlockColors().getTintSources(state).getFirst().colorInWorld(state, client.level, client.player.blockPosition());
                     }
 
-                    // 4. Paint this layer onto our canvas
+                    // Paint this layer onto our canvas
                     paintLayer(canvas, spritePixels, tint);
                 }
             }

@@ -115,9 +115,9 @@ public record PrefabData(
         }
 
         // Clamp positions to 16-bit range (0-65535)
-        int wz = (int) Math.max(0, Math.min(65535, pos.z()));
-        int wx = (int) Math.max(0, Math.min(65535, pos.x()));
-        int wy = (int) Math.max(0, Math.min(65535, pos.y()));
+        int wz = (int) Math.max(0, Math.min(65_535, pos.z() * 10));
+        int wx = (int) Math.max(0, Math.min(65_535, pos.x() * 10));
+        int wy = (int) Math.max(0, Math.min(65_535, pos.y() * 10));
 
         // Pixel 0: index, y (height)
         pixels[0] = packRGBA((index >> 8), index, (wy >> 8), wy);

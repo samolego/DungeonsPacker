@@ -18,6 +18,9 @@ public class ConverterBlockEntites {
     public static final BlockEntityType<PrefabBlockEntity> PREFAB_BLOCK_ENTITY =
             register("prefab", PrefabBlockEntity::new, ConverterBlocks.PREFAB_BLOCK);
 
+    public static final BlockEntityType<PrefabBlockEntity> MOBS_AREA_BLOCK_ENTITY =
+            register("mobs_area", PrefabBlockEntity::new, ConverterBlocks.MOBS_AREA_BLOCK);
+
     private static <T extends BlockEntity> BlockEntityType<T> register(
             String name,
             FabricBlockEntityTypeBuilder.Factory<? extends T> entityFactory,

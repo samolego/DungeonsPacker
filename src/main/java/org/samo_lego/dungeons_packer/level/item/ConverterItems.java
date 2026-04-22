@@ -10,6 +10,7 @@ import net.minecraft.world.item.Item.Properties;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.level.ModComponents;
 import org.samo_lego.dungeons_packer.level.block.prefab.PrefabData;
+import org.samo_lego.dungeons_packer.level.item.mobs.DungeonMonsterSpawnEggItem;
 
 import java.util.function.Function;
 
@@ -34,6 +35,15 @@ public class ConverterItems {
             new Item.Properties()
                     .useBlockDescriptionPrefix()
                     .component(ModComponents.PREFAB_DATA, PrefabData.getDefault())
+    );
+
+
+    public static final Item DUNGEON_MONSTER_SPAWN_EGG_ITEM = register(
+            "dungeon_spawn_egg",
+            DungeonMonsterSpawnEggItem::new,
+            new Item.Properties()
+                    .useBlockDescriptionPrefix()
+                    .component(ModComponents.MONSTER_DATA, "zombie")
     );
 
 

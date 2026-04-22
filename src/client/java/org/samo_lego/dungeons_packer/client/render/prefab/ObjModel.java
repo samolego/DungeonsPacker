@@ -25,11 +25,11 @@ public class ObjModel {
         poseStack.pushPose();
 
         var rel = state.getPrefabData().relativePos();
-        // 1. Translation (rel)
+        // Translation (rel)
         poseStack.translate(rel.x(), rel.y(), rel.z());
 
         var scale = state.getPrefabData().scale();
-        // 2. Scale (uniform)
+        // Scale (uniform)
         poseStack.scale((float) scale.x(), (float) scale.y(), (float) scale.z());
 
         // Rotation x, y, z
@@ -59,7 +59,7 @@ public class ObjModel {
                 FloatTuple tex  = obj.getTexCoord(tri.getTexCoordIndex(idx));
                 FloatTuple norm = obj.getNormal(tri.getNormalIndex(idx));
 
-                // Your UE to Minecraft axis mapping (X, Z, Y)
+                // UE to Minecraft axis mapping (X, Z, Y)
                 float x = vert.getX() / 100;
                 float y = vert.getZ() / 100;
                 float z = vert.getY() / 100;

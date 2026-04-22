@@ -74,7 +74,7 @@ public class PakExporter {
     }
 
     private static void writeBlueprintsData(PakBuilder builder, HashMap<String, List<int[]>> prefabs) {
-        CookedResourceWriter.writeTiles(builder, "archhaven", prefabs.keySet());
+        CookedResourceWriter.INSTANCE.writeTiles(builder, "archhaven", prefabs.keySet());
 
         for (var entry : prefabs.entrySet()) {
             var tileId = entry.getKey();

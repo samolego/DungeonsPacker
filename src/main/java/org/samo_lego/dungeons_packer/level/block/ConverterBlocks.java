@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
 import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlock;
+import org.samo_lego.dungeons_packer.level.block.mobs.MobsAreaBlock;
 import org.samo_lego.dungeons_packer.level.block.prefab.PrefabBlock;
 
 import java.util.function.Function;
@@ -47,6 +48,13 @@ public class ConverterBlocks {
 			PrefabBlock::new,
 			BlockBehaviour.Properties.of().noCollision().sound(SoundType.AMETHYST),
 			false
+	);
+
+	public static final Block MOBS_AREA_BLOCK = register(
+			"mobs_area",
+			MobsAreaBlock::new,
+			BlockBehaviour.Properties.of().noCollision().sound(SoundType.WOOD),
+			true
 	);
 
 

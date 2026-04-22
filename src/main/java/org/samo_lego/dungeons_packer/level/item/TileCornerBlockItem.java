@@ -32,6 +32,7 @@ public class TileCornerBlockItem extends BlockItem {
         ItemStack itemStack = player.getItemInHand(hand);
 
         // Raycast to check if we are looking at a block
+        // to allow mid-air-place
         BlockHitResult hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.NONE);
 
         if (level instanceof ServerLevel slevel) {

@@ -2,8 +2,9 @@ package org.samo_lego.dungeons_packer.client.network;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.Context;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
@@ -13,6 +14,7 @@ import org.samo_lego.dungeons_packer.network.FinishTextureDataC2SPacket;
 import org.samo_lego.dungeons_packer.network.RequestTexturesS2CPacket;
 import org.samo_lego.dungeons_packer.network.TextureDataC2SPacket;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,17 +30,19 @@ public class ClientPacketHandler {
             for (long lid : packet.blockStates()) {
                 int stateId = (int) lid;
                 var state = Block.stateById(stateId);
-                var model = client.getBlockRenderer().getBlockModel(state);
+                BlockStateModel model = client.getModelManager().getBlockStateModelSet().get(state);
 
                 Map<Direction, Identifier> sideMappings = new EnumMap<>(Direction.class);
                 Map<Identifier, byte[]> uniqueTextures = new HashMap<>();
 
                 for (Direction dir : Direction.values()) {
 
-                    for (BlockModelPart part : model.collectParts(rs)) {
+                    var parts = new ArrayList<BlockStateModelPart>();
+                    model.collectParts(rs, parts);
+                    for (BlockStateModelPart part : parts) {
 
                         for (BakedQuad quad : part.getQuads(dir)) {
-                            var spriteInfo = quad.spriteInfo();
+                            var spriteInfo = quad.materialInfo();
 
                             var sprite = spriteInfo.sprite();
                             var textureId = sprite.contents().name();
@@ -59,9 +63,12 @@ public class ClientPacketHandler {
 
                 // Also check 'null' (non-culled) quads so we don't miss
                 // the inside of blocks or non-cube shapes
-                for (BlockModelPart part : model.collectParts(RandomSource.create(42L))) {
+                var parts = new ArrayList<BlockStateModelPart>();
+                model.collectParts(RandomSource.create(42L), parts);
+
+                for (BlockStateModelPart part : parts) {
                     for (BakedQuad quad : part.getQuads(null)) {
-                        var textureId = quad.spriteInfo().sprite().contents().name();
+                        var textureId = quad.materialInfo().sprite().contents().name();
 
                         // If a side doesn't have a specific texture yet,
                         // the null quad is a good fallback.

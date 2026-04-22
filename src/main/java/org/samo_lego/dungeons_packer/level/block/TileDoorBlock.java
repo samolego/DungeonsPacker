@@ -63,15 +63,17 @@ public class TileDoorBlock extends AbstractLocalConvertableBlock {
         // Check if we are at side
         int x = relativePos.getX();
         int z = relativePos.getZ();
-        if (x != 0 && x != width || z != 0 && z != depth) {
-            var msg = Component.translatable("message.dungeons_packer.block_conversion.detected_invalid", Component.translatable(ConverterBlocks.TILE_DOOR_BLOCK.getDescriptionId()), Component.literal(absolutePos.toShortString())).withStyle(ChatFormatting.RED);
-            var command = String.format("/tp @s %d %d %d", absolutePos.getX(), absolutePos.getY(), absolutePos.getZ());
-            var style = msg.getStyle();
-            msg.setStyle(style
-                    .withClickEvent(new ClickEvent.SuggestCommand(command))
-                    .withHoverEvent(new ShowText(Component.translatable("chat.coordinates.tooltip").withStyle(ChatFormatting.YELLOW)))
-            );
-            player.sendSystemMessage(msg, false);
+        if (x != 0 && x != width - 1 && z != 0 && z != depth - 1) {
+            if (this.isMainBlock(absolutePos, player.level())) {
+                var msg = Component.translatable("message.dungeons_packer.block_conversion.detected_invalid", Component.translatable(ConverterBlocks.TILE_DOOR_BLOCK.getDescriptionId()), Component.literal(absolutePos.toShortString())).withStyle(ChatFormatting.RED);
+                var command = String.format("/tp @s %d %d %d", absolutePos.getX(), absolutePos.getY(), absolutePos.getZ());
+                var style = msg.getStyle();
+                msg.setStyle(style
+                        .withClickEvent(new ClickEvent.SuggestCommand(command))
+                        .withHoverEvent(new ShowText(Component.translatable("chat.coordinates.tooltip").withStyle(ChatFormatting.YELLOW)))
+                );
+                player.sendSystemMessage(msg, false);
+            }
 
             return BlockMap.DUNGEONS_AIR;
         }
