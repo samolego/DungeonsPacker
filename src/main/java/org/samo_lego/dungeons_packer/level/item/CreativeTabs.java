@@ -106,6 +106,6 @@ public class CreativeTabs {
     public static void initialize() {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_KEY, DUNGEONS_CREATIVE_TAB);
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_PREFAB_KEY, DUNGEONS_CREATIVE_PREFAB_TAB);
-        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_MONSTER_KEY, DUNGEONS_CREATIVE_MONSTER_TAB);
+        //Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, DUNGEONS_CREATIVE_TAB_MONSTER_KEY, DUNGEONS_CREATIVE_MONSTER_TAB);
     }
 }
