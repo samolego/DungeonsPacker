@@ -11,6 +11,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelResource;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
+import org.samo_lego.dungeons_packer.config.ModConfig;
 import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
 
 import java.io.File;
@@ -29,7 +30,11 @@ public class ExportCommand {
                            return 0;
                         }))
             .executes(context -> {
+                var exportPath = ModConfig.getInstance().exportFolder;
                 var folder = context.getSource().getLevel().getServer().getWorldPath(LevelResource.ROOT);
+                if (!exportPath.isBlank()) {
+                    folder = new File(exportPath).toPath();
+                }
                 var newFile = folder.resolve("exported.pak").toFile();
                 ExportCommand.execute(context, newFile, false);
                 return 0;
