@@ -22,7 +22,11 @@ Once you're happy with your tiles, you must connect them using *doors*. There's 
 2. Door shape from tile A should be identical to the one in tile B <!--(todo: test)-->
 <img width="854" height="480" alt="2026-04-22_10 44 15" src="https://github.com/user-attachments/assets/984bba94-860a-4936-9580-02c9003623c6" />
 
-### Mission ending
+### Mission start / end
+
+You can mark starting point of the mission by placing a player head on the ground. This tells dungeons to spawn it there.
+<img width="854" height="480" alt="2026-04-22_10 43 08" src="https://github.com/user-attachments/assets/6c6b3840-6337-4382-97b3-d6f05ede16ec" />
+
 
 For the player to successfully complete a level, they must get to the end of the mission. You can mark the ending with *End Mission* block.
 <img width="854" height="480" alt="2026-04-22_11 13 48" src="https://github.com/user-attachments/assets/4a14eca7-cca8-4320-83af-1142ffdd4124" />
