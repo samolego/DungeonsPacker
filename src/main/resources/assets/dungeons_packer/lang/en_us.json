@@ -1,6 +1,9 @@
 {
   "block.dungeons_packer.tile_corner": "Tile Corner",
+  "block.dungeons_packer.tile_door": "Tile Door",
   "block.dungeons_packer.end_mission": "End Mission",
+  "block.dungeons_packer.prefab": "Prefab",
+  "prefab_block.rotation": "Rotation",
   "message.conversion.block_missing": "The block %s is missing the translation to dungeons. Using air block instead.",
   "itemGroup.dungeons_packer": "Dungeons Packer",
   "commands.dungeons_packer.export.success": "Successfully exported the map to %s",
@@ -12,5 +15,17 @@
   "commands.pak.unpack.fail": "Failed to unpack the file due to error: %s",
   "commands.pak.unpack.success": "Successfully unpacked the file to %s",
   "commands.dungeons_packer.export.not_enough_tiles": "You need at least 2 tiles to export to dungeons.",
-  "commands.dungeons_packer.export.already_exporting": "An export is already in progress, please wait."
+  "commands.dungeons_packer.export.already_exporting": "An export is already in progress, please wait.",
+  "message.dungeons_packer.block_conversion.cache_start": "Creating block mappings ...",
+  "message.dungeons_packer.block_conversion.cache_end": "Block mappings created!",
+  "message.dungeons_packer.block_conversion.no_conversion": "Ran out of states to convert %s.",
+  "command.dungeons_packer.recreate_block_mappings.success": "Successfully reregistered block mappings!",
+  "itemGroup.dungeons_packer_generated": "Generated Prefabs",
+  "itemGroup.dungeons_packer_mobs": "Dungeons Mobs",
+  "message.dungeons_packer.prefab_conversion_failed": "Prefab conversion at %s failed. Unknown id: %s",
+  "message.dungeons_packer.cannot_place_in_tile": "Cannot place this block in existing tile.",
+  "message.dungeons_packer.door_place.on_side": "You must place this block at the side of a tile!",
+  "message.dungeons_packer.door_place.in_tile": "Create a tile using %s first!",
+  "message.dungeons_packer.block_conversion.detected_invalid": "Invalid %s block at %s.",
+  "block.dungeons_packer.mobs_area": "Mobs Area"
 }

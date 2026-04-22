@@ -1,5 +1,6 @@
 package org.samo_lego.japak;
 
+import org.samo_lego.japak.io.PakReader;
 import org.samo_lego.japak.structs.PakEntry;
 import org.samo_lego.japak.structs.PakFooter;
 import org.samo_lego.japak.structs.PakIndex;
@@ -11,7 +12,7 @@ import java.util.List;
 
 public class PakUnpacker {
 
-    private final org.samo_lego.japak.io.PakReader reader;
+    private final PakReader reader;
     private final PakFooter footer;
     private final PakIndex index;
     private final byte[] key;

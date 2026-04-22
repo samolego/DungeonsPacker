@@ -74,7 +74,7 @@ public class PakBuilder {
     public void finish() throws IOException, NoSuchAlgorithmException {
         long indexOffset = this.writer.getPos();
 
-        // 3. Write the Index to a temporary byte array to calculate its hash and size
+        // Write the index to a temporary byte array to calculate its hash and scale
         ByteArrayOutputStream indexBytesStream = new ByteArrayOutputStream();
         try (PakWriter indexWriter = new PakWriter(indexBytesStream)) {
             PakIndex pakIndex = new PakIndex();
@@ -91,7 +91,7 @@ public class PakBuilder {
         // Now write the index to the actual file
         this.writer.write(indexBytes);
 
-        // 4. Write the Footer
+        // Write the Footer
         PakFooter footer = new PakFooter();
         footer.version = this.version;
         footer.indexOffset = indexOffset;

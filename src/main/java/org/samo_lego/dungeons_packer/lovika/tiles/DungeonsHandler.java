@@ -11,14 +11,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.samo_lego.dungeons_packer.DungeonsPacker;
-import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.DungeonLevel;
 import org.samo_lego.dungeons_packer.lovika.ObjectGroup;
-import org.samo_lego.dungeons_packer.lovika.PakExporter;
+import org.samo_lego.dungeons_packer.lovika.paking.PakExporter;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
+import org.samo_lego.dungeons_packer.lovika.serialization.CustomJsonSerializable;
 import org.samo_lego.dungeons_packer.lovika.serialization.EnumLowerCaseSerializer;
+import org.samo_lego.dungeons_packer.lovika.serialization.ICustomJsonSerializable;
 import org.samo_lego.dungeons_packer.lovika.serialization.Vec3iSerializer;
 
 import java.io.File;
@@ -26,7 +28,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -35,6 +38,7 @@ public class DungeonsHandler {
             .registerTypeHierarchyAdapter(Vec3i.class, new Vec3iSerializer())
             .registerTypeHierarchyAdapter(Direction.class, new EnumLowerCaseSerializer<Direction>())
             .registerTypeHierarchyAdapter(BlockShape.class, new EnumLowerCaseSerializer<BlockShape>())
+            .registerTypeHierarchyAdapter(ICustomJsonSerializable.class, new CustomJsonSerializable())
             .disableHtmlEscaping()
             .setPrettyPrinting()
             .enableComplexMapKeySerialization()
@@ -51,7 +55,7 @@ public class DungeonsHandler {
 
     public DungeonsHandler(String levelName) {
         this.levelName = levelName;
-        this.objectGroup = new ObjectGroup(new HashSet<>());
+        this.objectGroup = new ObjectGroup();
         this.levelProperties = new DungeonLevel(levelName);
         this.textureCache = new Reference2ObjectOpenHashMap<>();
     }
@@ -62,17 +66,35 @@ public class DungeonsHandler {
             return;
         }
         var resourceGen = new DungeonBlockIdProvider();
+        var player = executioner.getPlayer();
 
-        var tiles = this.objectGroup.getTiles(executioner, resourceGen);
+        if (player == null) {
+            executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_a_player").withStyle(ChatFormatting.RED));
+            return;
+        }
+
+
+        var prefabs = new HashMap<String, List<int[]>>();
+        var tiles = this.objectGroup.getTiles(player, resourceGen, prefabs);
         if (tiles.length < 2) {
             executioner.sendSystemMessage(Component.translatable("commands.dungeons_packer.export.not_enough_tiles").withStyle(ChatFormatting.RED));
             return;
         }
 
-        var awaitingPackets  = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
+        var awaitingPackets = resourceGen.fetchClientTextures(executioner.getPlayer(), this.textureCache.keySet());
         this.finishExport = () -> {
             try {
-                PakExporter.writePak(executioner, outputFile, this.levelName, this.levelProperties, this.objectGroup, tiles, dump, resourceGen.getUsedTextures(), this.textureCache);
+                PakExporter.writePak(executioner,
+                        outputFile,
+                        this.levelName,
+                        this.levelProperties,
+                        this.objectGroup,
+                        tiles,
+                        dump,
+                        resourceGen.getUsedTextures(),
+                        this.textureCache,
+                        prefabs
+                );
 
                 var message = dump ? "commands.dungeons_packer.dump.success" : "commands.dungeons_packer.export.success";
                 executioner.sendSuccess(
@@ -117,9 +139,9 @@ public class DungeonsHandler {
             blockEntity.setMatchingCorner(this.cornerEntity.getBlockPos());
 
             if (this.cornerEntity.isMainCorner()) {
-                this.objectGroup.objects().add(this.cornerEntity);
+                this.objectGroup.addTileCorner(this.cornerEntity);
             } else {
-                this.objectGroup.objects().add(blockEntity);
+                this.objectGroup.addTileCorner(blockEntity);
             }
 
             this.cornerEntity = null;
@@ -129,24 +151,12 @@ public class DungeonsHandler {
     public void onCornerRemoved(TileCornerBlockEntity removed) {
         if (this.cornerEntity == removed) {
             this.cornerEntity = null;
-        } else if (this.cornerEntity != null) {
-            // We have to create a new matching pair
-            var matching = removed.getMatchingCorner();
-            if (matching.isEmpty()) {
-                DungeonsPacker.LOGGER.warn("Corner removed without matching corner set.");
-                return;
-            }
-
-            var otherCornerBE = matching.get();
-            otherCornerBE.setMatchingCorner(this.cornerEntity.getBlockPos());
-            this.cornerEntity.setMatchingCorner(matching.get().getBlockPos());
-            this.cornerEntity = null;
         } else {
-            // Set other corner of the removed box as current corner
-            removed.getMatchingCorner().ifPresent(be -> {
-                this.cornerEntity = be;
-                be.setMatchingCorner(null);
-            });
+            this.objectGroup.removeCorner(removed);
+            var matching = removed.getMatchingCorner().orElseThrow(() -> new IllegalStateException("Removed corner without matching corner"));
+            removed.setMatchingCorner(null);
+            matching.setMatchingCorner(null);
+            this.onCornerPlaced(matching);
         }
     }
 }

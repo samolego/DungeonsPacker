@@ -31,18 +31,18 @@ public class PakFooter {
         long footerOffset = -1;
 
         // Check 204-byte footer (V8B)
-        /*if (size >= 204) {
-            reader.setPos(size - 204);
+        /*if (scale >= 204) {
+            reader.setPos(scale - 204);
             if (reader.readInt() == PAK_MAGIC) {
-                footerOffset = size - 204;
+                footerOffset = scale - 204;
                 this.version = PakVersion.from(reader.readInt());
             }
         }
         // Check 172-byte footer (V8A)
-        if (footerOffset == -1 && size >= 172) {
-            reader.setPos(size - 172);
+        if (footerOffset == -1 && scale >= 172) {
+            reader.setPos(scale - 172);
             if (reader.readInt() == PAK_MAGIC) {
-                footerOffset = size - 172;
+                footerOffset = scale - 172;
                 this.version = PakVersion.V8A;
             }
         }*/
@@ -66,7 +66,7 @@ public class PakFooter {
 
         // If it's a newer version, we can also go back and grab the GUID and encryption flag
         /*if (this.version.value >= PakVersion.V8A.value) {
-            long footerStart = (this.version == PakVersion.V8B) ? size - 204 : size - 172;
+            long footerStart = (this.version == PakVersion.V8B) ? scale - 204 : scale - 172;
             reader.setPos(footerStart);
             this.encryptionKeyGuid = reader.readBytes(20);
             this.encrypted = reader.readByte() == 1;
@@ -79,14 +79,14 @@ public class PakFooter {
      */
     public void write(PakWriter writer) throws IOException {
         //if (this.version.value < PakVersion.V8A.value) {
-        // Legacy (44 bytes)
+        // Legacy (44 textureId2bytes)
         writer.writeInt(PAK_MAGIC);
         writer.writeInt(this.version.value);
         writer.writeLong(this.indexOffset);
         writer.writeLong(this.indexSize);
         writer.write(this.hash);
         /*} else if (this.version == PakVersion.V8A) {
-            // V8A (172 bytes) - Magic at Start
+            // V8A (172 textureId2bytes) - Magic at Start
             writer.writeInt(PAK_MAGIC);
             writer.writeInt(8); // Internal version
             writer.writeLong(this.indexOffset);
@@ -96,7 +96,7 @@ public class PakFooter {
             writer.write(this.encryptionKeyGuid);
             writer.write(new byte[107]); // Padding to reach 172
         } else {
-            // V8B (204 bytes) - GUID at Start
+            // V8B (204 textureId2bytes) - GUID at Start
             writer.write(this.encryptionKeyGuid); // 20
             writer.writeByte((byte) (this.encrypted ? 1 : 0)); // 1
             writer.writeInt(PAK_MAGIC); // 4

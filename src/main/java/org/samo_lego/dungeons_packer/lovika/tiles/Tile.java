@@ -1,17 +1,17 @@
 package org.samo_lego.dungeons_packer.lovika.tiles;
 
 import com.google.gson.annotations.SerializedName;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
-import org.samo_lego.dungeons_packer.block.corner.TileCornerBlockEntity;
+import org.samo_lego.dungeons_packer.level.block.corner.TileCornerBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.Door;
 import org.samo_lego.dungeons_packer.lovika.Utils;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockConstants;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.IDungeonsConvertable;
-import org.samo_lego.dungeons_packer.lovika.region.Region;
 import org.samo_lego.dungeons_packer.lovika.block_conversion.DungeonBlockIdProvider;
 import org.samo_lego.dungeons_packer.lovika.region.RegionLike;
 
@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public record Tile(
@@ -33,22 +34,16 @@ public record Tile(
         List<Door> doors,
         List<RegionLike> regions
 ) {
-    public Tile {
-        if (doors == null) {
-            doors = new ArrayList<>();
-        }
-        if (regions == null) {
-            regions = new ArrayList<>();
-        }
-    }
-
-
-    public static Optional<Tile> fromTileCornerBlock(CommandSourceStack playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen) {
+    public static Optional<Tile> fromTileCornerBlock(ServerPlayer playerConverting, TileCornerBlockEntity cornerBlockEntity, DungeonBlockIdProvider resourceGen, int index, Map<String, List<int[]>> prefabMap) {
+        // todo : check BlockPos#betweenClosed
         var tileBox = cornerBlockEntity.getRenderableBox();
         var pos = tileBox.localPos().offset(cornerBlockEntity.getBlockPos());
         var size = tileBox.size();
         var doors = new ArrayList<Door>();
         var regions = new ArrayList<RegionLike>();
+        String name = String.format("tile%03d", index);
+        var prefabs = new ArrayList<int[]>();
+        prefabMap.put(name, prefabs);
 
 
         int height = size.getY();
@@ -58,10 +53,10 @@ public record Tile(
         final int arraySize = height * depth * width;
 
         // Dungeon block IDs
-        // We pack them either into single bytes or double bytes
+        // We pack them either into single textureId2bytes or double textureId2bytes
         // depending on whether we need 16 bit ids
         short[] blockIds = new short[arraySize];
-        // Half the size as we merge odd and even block data into a single byte
+        // Half the scale as we merge odd and even block data into a single byte
         byte[] blockData = new byte[Math.ceilDiv(arraySize, 2)];
         boolean need16bitIds = false;
 
@@ -95,10 +90,10 @@ public record Tile(
 
                         // Do the block conversion
                         if (blockState.getBlock() instanceof IDungeonsConvertable cnv) {
-                            converted = cnv.dungeons_packer$convertToDungeons(cornerBlockEntity.getLevel(), absolutePos, localPos.immutable(), doors, regions);
+                            converted = cnv.dungeons_packer$convertToDungeons(resourceGen, playerConverting, absolutePos, localPos.immutable(), width, depth, doors, regions, prefabs);
                         } else {
                             //var ids = BlockMap.toDungeonBlockId(blockState);
-                            var ids = resourceGen.requestId(blockState);
+                            var ids = resourceGen.requestId(blockState, playerConverting);
                             if (ids != -1) {
                                 converted = ids;
                             } else {
@@ -106,7 +101,7 @@ public record Tile(
                             }
                         }
 
-                        short convBlockId = (short) (converted >> 4);
+                        short convBlockId = (short) (converted >> BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT);
                         byte convertedData = (byte) (converted & 0x0F);
 
                         blockIds[blockIdx] = convBlockId;
@@ -245,7 +240,7 @@ public record Tile(
         }
 
         return Optional.of(new Tile(
-                String.format("from_%s_to_%s", posToStr(pos), posToStr(pos.offset(size))),
+                name,
                 pos,
                 size,
                 encodedBlocks,
@@ -258,7 +253,4 @@ public record Tile(
         ));
     }
 
-    private static String posToStr(Vec3i pos) {
-        return String.format("x%d_y%d_z%d", pos.getX(), pos.getY(), pos.getZ());
-    }
 }

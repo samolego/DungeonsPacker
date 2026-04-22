@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-import static org.samo_lego.dungeons_packer.block.EndMissionBlock.END;
+import static org.samo_lego.dungeons_packer.level.block.EndMissionBlock.END;
 
 
 public class TileProperties {

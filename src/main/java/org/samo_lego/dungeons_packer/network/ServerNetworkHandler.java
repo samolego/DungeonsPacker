@@ -1,7 +1,9 @@
 package org.samo_lego.dungeons_packer.network;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.Context;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.Block;
+import org.samo_lego.dungeons_packer.level.block.prefab.PrefabBlockEntity;
 import org.samo_lego.dungeons_packer.lovika.resource_pack.TextureBytes;
 import org.samo_lego.dungeons_packer.lovika.tiles.IDungeonsHandlerProvider;
 
@@ -21,6 +23,18 @@ public class ServerNetworkHandler {
         context.server().execute(() -> {
             var tl = ((IDungeonsHandlerProvider) context.player().level()).dungeons_packer$getDungeonsHandler();
              tl.onTextureReceiveEnd();
+        });
+    }
+
+    public static void onUpdatePrefabReceived(UpdatePrefabC2SPacket packet, Context context) {
+        context.server().execute(() -> {
+            var player = context.player();
+            if (player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER) && player.blockPosition().closerThan(packet.pos(), 6)) {
+                var blockEntity = player.level().getBlockEntity(packet.pos());
+                if (blockEntity instanceof PrefabBlockEntity pbe) {
+                    pbe.setPrefabData(packet.prefabData());
+                }
+            }
         });
     }
 }

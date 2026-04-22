@@ -1,7 +1,11 @@
 package org.samo_lego.dungeons_packer.lovika.block_conversion;
 
-import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,78 +20,155 @@ import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.properties.RailShape;
 import net.minecraft.world.level.block.state.properties.SlabType;
+import org.samo_lego.dungeons_packer.DungeonsPacker;
+import org.samo_lego.dungeons_packer.config.ModConfig;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.BlockShape;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class BlockMap {
     public static final short DUNGEONS_AIR = (short) 0x0000;
-
-    // Java block state to [dungeons-block-id|dungeons-block-data] as a short
-    private static final Map<BlockState, Rule> CACHE = new Reference2ObjectOpenHashMap<>(256);
     private static final Map<Block, List<Rule>> RULES = new TreeMap<>(Comparator.comparing(b -> Block.getId(b.defaultBlockState())));//new Reference2ObjectOpenHashMap<>(256);
+    private static final TreeSet<Rule>[] BLOCK_DATA = new TreeSet[0x0208 + 1];
 
-    public static Optional<Short> toDungeonBlockId(BlockState state) {
-        Rule cached = CACHE.get(state);
-        if (cached != null) {
-            cached.markUsed();
-            return Optional.of(cached.getResult());
+    private final Map<BlockShape, TreeSet<Rule>> shapeCache = new EnumMap<>(BlockShape.class);
+
+    private <T extends Comparable<T>, V extends T> void initCache(ServerPlayer player) {
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.cache_start"), true);
+        for (var entry : RULES.entrySet()) {
+            var block = entry.getKey();
+            if (!(block instanceof AirBlock) &&
+                    !ModConfig.getInstance().whitelisted_blocks.isEmpty() &&
+                    !ModConfig.getInstance().whitelisted_blocks.contains(block)) {
+                continue;
+            }
+            var rules = entry.getValue();
+
+            for (var rule : rules) {
+                var blockstate = block.defaultBlockState();
+                for (var req : rule.requirements().entrySet()) {
+                    blockstate = blockstate.setValue((Property<T>) req.getKey(), (V) req.getValue());
+                }
+                var shape = BlockShape.fromBlockState(blockstate, player.level());
+                this.shapeCache.computeIfAbsent(shape, _ -> new TreeSet<>(Comparator.comparing(Rule::result))).add(rule);
+            }
+
+            short id = (short) (rules.getFirst().result() & BlockConstants.BLOCK_ID_MASK);
+            var blockRules = BLOCK_DATA[id >> BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT];
+            if (blockRules != null && blockRules.size() == 1 && blockRules.getFirst().requirements().isEmpty()) {
+                var blockstate = block.defaultBlockState();
+                var shape = BlockShape.fromBlockState(blockstate, player.level());
+
+                var existing = this.shapeCache.computeIfAbsent(shape, _ -> new TreeSet<>(Comparator.comparing(Rule::result)));
+                // Add missing rules
+                for (short i = 0; i < BlockConstants.BLOCK_DATA_MASK + 1; ++i) {
+                    var rule = new Rule(Map.of(), (short) (id | i), block);
+                    existing.add(rule);
+                }
+            }
+        }
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.cache_end"), true);
+    }
+
+    public short toDungeonBlockId(BlockState state, ServerPlayer player) {
+        if (this.shapeCache.isEmpty()) {
+            initCache(player);
         }
 
-        List<Rule> blockRules = RULES.get(state.getBlock());
-        if (blockRules != null) {
-            Rule bestRule = null;
-            int maxScore = -1;
+        var shape = BlockShape.fromBlockState(state, player.level());
+        var conversionOptions = this.shapeCache.get(shape);
 
-            for (Rule rule : blockRules) {
-                int score = rule.matches(state);
-                if (score > maxScore) {
-                    maxScore = score;
+        if (conversionOptions == null) {
+            DungeonsPacker.LOGGER.warn("Block shape {} for state {} is not calculated!", shape, state);
+            return -1;
+        }
+
+        if (shape != BlockShape.FULL_BLOCK) {
+            // Find the best match
+            int bestMatch = -1;
+            Rule bestRule = null;
+            for (var rule : conversionOptions) {
+                int match = rule.matches(state);
+                if (match > bestMatch) {
+                    bestMatch = match;
                     bestRule = rule;
                 }
             }
 
-            if (bestRule != null) {
-                bestRule.markUsed();
-                CACHE.put(state, bestRule);
-
-                return Optional.of(bestRule.getResult());
+            if (bestMatch != -1) {
+                conversionOptions.remove(bestRule);
+                return bestRule.result();
             }
+
+            // Replace with full block
+            conversionOptions = this.shapeCache.get(BlockShape.FULL_BLOCK);
         }
 
-        return Optional.empty();
+        // Present with a full block conversion
+        if (!conversionOptions.isEmpty()) {
+            var rule = conversionOptions.removeFirst();
+
+            return rule.result();
+        }
+
+        player.sendSystemMessage(Component.translatable("message.dungeons_packer.block_conversion.no_conversion", Component.translatable(state.getBlock().getDescriptionId())), true);
+        return -1;
     }
 
     public static void register(Block block, Map<Property<?>, Comparable<?>> blockstateRules, short id, byte ... data) {
-        id <<= 4;
+        short shiftedId = (short) (id << BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT);
 
         byte tailByte = 0;
         if (data.length > 0) {
             tailByte = data[0];
         }
 
-        short merged = (short) (id | tailByte);
+        short merged = (short) (shiftedId | tailByte);
 
         var requiredRules = RULES.computeIfAbsent(block, _ -> new ArrayList<>());
-        requiredRules.add(new Rule(blockstateRules, merged));
+        var rule = new Rule(blockstateRules, merged, block);
+        requiredRules.add(rule);
+
+
+        var blockData = BLOCK_DATA[id];
+        if (blockData == null) {
+            blockData = new TreeSet<>(Comparator.comparing(Rule::result));
+            BLOCK_DATA[id] = blockData;
+        }
+        blockData.add(rule);
     }
 
-    public static void initialize() { }
-
-    public static Map<Block, List<Rule>> dbg() {
+    public static <T extends Comparable<T>, V extends T> Map<Block, List<Rule>> dbg(ServerLevel level) {
+        RULES.forEach((block, rules) -> {
+            for (Rule rule : rules) {
+                var blockstate = block.defaultBlockState();
+                for (var entry : rule.requirements().entrySet()) {
+                    blockstate = blockstate.setValue((Property<T>) entry.getKey(), (V) entry.getValue());
+                }
+                var hexId = rule.result();
+                short id = (short) (hexId >> BlockConstants.BLOCK_ID_MASK_SHIFT_COUNT);
+                byte data = (byte) (hexId & 0b1111);
+                var resourceId = BlockConstants.getResourceStringId(id);
+                var shape = BlockShape.fromBlockState(blockstate, level);
+                var shapeName = "BlockShape." + shape.name().toUpperCase();
+                System.out.printf("register(%s, (short) %#04X, (byte) 0b%s, \"%s\"); // %s with %d requirements%n", shapeName, id, Integer.toBinaryString(data), resourceId, blockstate, rule.requirements().size());
+            }
+        });
         return RULES;
     }
 
-    static {
-
+    public static void initialize() {
         // Dungeons Format:
         //   0: Block ID
         //   1: Block Data
         //   2: Block Data Mask (unused in Java -> Dungeons conversion, but I left it in as maybe one day we can support other way)
+        RULES.clear();
         register(Blocks.AIR, Map.of(), BlockMap.DUNGEONS_AIR);
         register(Blocks.STONE, Map.of(), (short) 0x0001, (byte) 0b0000);
         register(Blocks.GRANITE, Map.of(), (short) 0x0001, (byte) 0b0001);
@@ -166,22 +247,22 @@ public class BlockMap {
         register(Blocks.GOLD_ORE, Map.of(), (short) 0x000e, (byte) 0b0000);
         register(Blocks.IRON_ORE, Map.of(), (short) 0x000f, (byte) 0b0000);
         register(Blocks.COAL_ORE, Map.of(), (short) 0x0010, (byte) 0b0000);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0000);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0001);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0010);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0011, (byte) 0b0011);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0100);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0101);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0110);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0011, (byte) 0b0111);
-        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1000);
-        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1001);
-        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1010);
-        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0011, (byte) 0b1011);
-        register(Blocks.OAK_WOOD, Map.of(), (short) 0x0011, (byte) 0b1100);
-        register(Blocks.SPRUCE_WOOD, Map.of(), (short) 0x0011, (byte) 0b1101);
-        register(Blocks.BIRCH_WOOD, Map.of(), (short) 0x0011, (byte) 0b1110);
-        register(Blocks.JUNGLE_WOOD, Map.of(), (short) 0x0011, (byte) 0b1111);
+        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0000);
+        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0001);
+        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0010);
+        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0011, (byte) 0b0011);
+//        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0100);
+//        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0101);
+//        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0110);
+//        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0011, (byte) 0b0111);
+//        register(Blocks.OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1000);
+//        register(Blocks.SPRUCE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1001);
+//        register(Blocks.BIRCH_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1010);
+//        register(Blocks.JUNGLE_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0011, (byte) 0b1011);
+//        register(Blocks.OAK_WOOD, Map.of(), (short) 0x0011, (byte) 0b1100);
+//        register(Blocks.SPRUCE_WOOD, Map.of(), (short) 0x0011, (byte) 0b1101);
+//        register(Blocks.BIRCH_WOOD, Map.of(), (short) 0x0011, (byte) 0b1110);
+//        register(Blocks.JUNGLE_WOOD, Map.of(), (short) 0x0011, (byte) 0b1111);
         register(Blocks.OAK_LEAVES, Map.of(BlockStateProperties.PERSISTENT, false), (short) 0x0012, (byte) 0b0000, (byte) 0b0111);
         register(Blocks.SPRUCE_LEAVES, Map.of(BlockStateProperties.PERSISTENT, false), (short) 0x0012, (byte) 0b0001, (byte) 0b0111);
         register(Blocks.BIRCH_LEAVES, Map.of(BlockStateProperties.PERSISTENT, false), (short) 0x0012, (byte) 0b0010, (byte) 0b0111);
@@ -194,18 +275,18 @@ public class BlockMap {
         register(Blocks.GLASS, Map.of(), (short) 0x0014, (byte) 0b0000);
         register(Blocks.LAPIS_ORE, Map.of(), (short) 0x0015, (byte) 0b0000);
         register(Blocks.LAPIS_BLOCK, Map.of(), (short) 0x0016, (byte) 0b0000);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.DOWN), (short) 0x0017, (byte) 0b0000);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.UP), (short) 0x0017, (byte) 0b0001);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.NORTH), (short) 0x0017, (byte) 0b0010);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.SOUTH), (short) 0x0017, (byte) 0b0011);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.WEST), (short) 0x0017, (byte) 0b0100);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.EAST), (short) 0x0017, (byte) 0b0101);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.DOWN), (short) 0x0017, (byte) 0b1000);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.UP), (short) 0x0017, (byte) 0b1001);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.NORTH), (short) 0x0017, (byte) 0b1010);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.SOUTH), (short) 0x0017, (byte) 0b1011);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.WEST), (short) 0x0017, (byte) 0b1100);
-        register(Blocks.DISPENSER, Map.of(BlockStateProperties.FACING, Direction.EAST), (short) 0x0017, (byte) 0b1101);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.DOWN), (short) 0x0017, (byte) 0b0000);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.UP), (short) 0x0017, (byte) 0b0001);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.NORTH), (short) 0x0017, (byte) 0b0010);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x0017, (byte) 0b0011);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.WEST), (short) 0x0017, (byte) 0b0100);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, false, BlockStateProperties.FACING, Direction.EAST), (short) 0x0017, (byte) 0b0101);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.DOWN), (short) 0x0017, (byte) 0b1000);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.UP), (short) 0x0017, (byte) 0b1001);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.NORTH), (short) 0x0017, (byte) 0b1010);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.SOUTH), (short) 0x0017, (byte) 0b1011);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.WEST), (short) 0x0017, (byte) 0b1100);
+        register(Blocks.DISPENSER, Map.of(BlockStateProperties.TRIGGERED, true, BlockStateProperties.FACING, Direction.EAST), (short) 0x0017, (byte) 0b1101);
         register(Blocks.SANDSTONE, Map.of(), (short) 0x0018, (byte) 0b0000);
         register(Blocks.CHISELED_SANDSTONE, Map.of(), (short) 0x0018, (byte) 0b0001);
         register(Blocks.CUT_SANDSTONE, Map.of(), (short) 0x0018, (byte) 0b0010);
@@ -306,14 +387,14 @@ public class BlockMap {
         register(Blocks.STONE_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x002b, (byte) 0b0101);
         register(Blocks.QUARTZ_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x002b, (byte) 0b0110);
         register(Blocks.NETHER_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x002b, (byte) 0b0111);
-        register(Blocks.SMOOTH_STONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0000);
-        register(Blocks.SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0001);
-        register(Blocks.PETRIFIED_OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0010);
-        register(Blocks.COBBLESTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0011);
-        register(Blocks.BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0100);
-        register(Blocks.STONE_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0101);
-        register(Blocks.QUARTZ_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0110);
-        register(Blocks.NETHER_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x002c, (byte) 0b0111);
+        register(Blocks.SMOOTH_STONE_SLAB, Map.of(), (short) 0x002c, (byte) 0b0000);
+        register(Blocks.SANDSTONE_SLAB, Map.of(), (short) 0x002c, (byte) 0b0001);
+        register(Blocks.PETRIFIED_OAK_SLAB, Map.of(), (short) 0x002c, (byte) 0b0010);
+        register(Blocks.COBBLESTONE_SLAB, Map.of(), (short) 0x002c, (byte) 0b0011);
+        register(Blocks.BRICK_SLAB, Map.of(), (short) 0x002c, (byte) 0b0100);
+        register(Blocks.STONE_BRICK_SLAB, Map.of(), (short) 0x002c, (byte) 0b0101);
+        register(Blocks.QUARTZ_SLAB, Map.of(), (short) 0x002c, (byte) 0b0110);
+        register(Blocks.NETHER_BRICK_SLAB, Map.of(), (short) 0x002c, (byte) 0b0111);
         register(Blocks.SMOOTH_STONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x002c, (byte) 0b1000);
         register(Blocks.SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x002c, (byte) 0b1001);
         register(Blocks.PETRIFIED_OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x002c, (byte) 0b1010);
@@ -374,10 +455,16 @@ public class BlockMap {
         register(Blocks.WHEAT, Map.of(BlockStateProperties.AGE_7, 6), (short) 0x003b, (byte) 0b0110);
         register(Blocks.WHEAT, Map.of(BlockStateProperties.AGE_7, 7), (short) 0x003b, (byte) 0b0111);
         register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 0), (short) 0x003c, (byte) 0b0000);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 1), (short) 0x003c, (byte) 0b0001);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 2), (short) 0x003c, (byte) 0b0010);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 3), (short) 0x003c, (byte) 0b0011);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 4), (short) 0x003c, (byte) 0b0100);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 5), (short) 0x003c, (byte) 0b0101);
+        register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 6), (short) 0x003c, (byte) 0b0110);
         register(Blocks.FARMLAND, Map.of(BlockStateProperties.MOISTURE, 7), (short) 0x003c, (byte) 0b0111);
-        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x003d, (byte) 0b0010);
-        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x003d, (byte) 0b0011);
-        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x003d, (byte) 0b0100);
+        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x003d, (byte) 0b0010);
+        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x003d, (byte) 0b0011);
+        register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x003d, (byte) 0b0100);
         register(Blocks.FURNACE, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST), (short) 0x003d, (byte) 0b0101);
         register(Blocks.OAK_SIGN, Map.of(BlockStateProperties.ROTATION_16, 0), (short) 0x003f, (byte) 0b0000);
         register(Blocks.OAK_SIGN, Map.of(BlockStateProperties.ROTATION_16, 1), (short) 0x003f, (byte) 0b0001);
@@ -513,38 +600,38 @@ public class BlockMap {
         register(Blocks.JACK_O_LANTERN, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x005b, (byte) 0b0001);
         register(Blocks.JACK_O_LANTERN, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x005b, (byte) 0b0010);
         register(Blocks.JACK_O_LANTERN, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST), (short) 0x005b, (byte) 0b0011);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0000);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0001);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0010);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0011);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0100);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0101);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0110);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0111);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1000);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1001);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1010);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1011);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1100);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1101);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1110);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1111);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0000);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0001);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0010);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0011);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0100);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0101);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0110);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0111);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1000);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1001);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1010);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1011);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1100);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1101);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1110);
-        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1111);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0000);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0001);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0010);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0011);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0100);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0101);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0110);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b0111);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1000);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1001);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1010);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1011);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1100);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1101);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1110);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, false), (short) 0x005d, (byte) 0b1111);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0000);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0001);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0010);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 1, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0011);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0100);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0101);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0110);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 2, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b0111);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1000);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1001);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1010);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 3, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1011);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1100);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1101);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1110);
+        register(Blocks.REPEATER, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.DELAY, 4, BlockStateProperties.POWERED, true), (short) 0x005e, (byte) 0b1111);
         register(Blocks.OAK_TRAPDOOR, Map.of(BlockStateProperties.OPEN, false, BlockStateProperties.HALF, Half.BOTTOM, BlockStateProperties.HORIZONTAL_FACING, Direction.EAST), (short) 0x0060, (byte) 0b0000);
         register(Blocks.OAK_TRAPDOOR, Map.of(BlockStateProperties.OPEN, false, BlockStateProperties.HALF, Half.BOTTOM, BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x0060, (byte) 0b0001);
         register(Blocks.OAK_TRAPDOOR, Map.of(BlockStateProperties.OPEN, false, BlockStateProperties.HALF, Half.BOTTOM, BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x0060, (byte) 0b0010);
@@ -734,14 +821,14 @@ public class BlockMap {
         register(Blocks.JUNGLE_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.HALF, Half.TOP), (short) 0x0088, (byte) 0b0101);
         register(Blocks.JUNGLE_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.HALF, Half.TOP), (short) 0x0088, (byte) 0b0110);
         register(Blocks.JUNGLE_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.HALF, Half.TOP), (short) 0x0088, (byte) 0b0111);
-        register(Blocks.BLACKSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0000);
-        register(Blocks.CRIMSON_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0001);
-        register(Blocks.POLISHED_BLACKSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0010);
-        register(Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0011);
-        register(Blocks.SMOOTH_QUARTZ_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0100);
-        register(Blocks.STONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0101);
-        register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0110);
-        register(Blocks.CUT_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0089, (byte) 0b0111);
+        register(Blocks.BLACKSTONE_SLAB, Map.of(), (short) 0x0089, (byte) 0b0000);
+        register(Blocks.CRIMSON_SLAB, Map.of(), (short) 0x0089, (byte) 0b0001);
+        register(Blocks.POLISHED_BLACKSTONE_SLAB, Map.of(), (short) 0x0089, (byte) 0b0010);
+        register(Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Map.of(), (short) 0x0089, (byte) 0b0011);
+        register(Blocks.SMOOTH_QUARTZ_SLAB, Map.of(), (short) 0x0089, (byte) 0b0100);
+        register(Blocks.STONE_SLAB, Map.of(), (short) 0x0089, (byte) 0b0101);
+        register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(), (short) 0x0089, (byte) 0b0110);
+        register(Blocks.CUT_SANDSTONE_SLAB, Map.of(), (short) 0x0089, (byte) 0b0111);
         register(Blocks.BLACKSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x0089, (byte) 0b1000);
         register(Blocks.CRIMSON_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x0089, (byte) 0b1001);
         register(Blocks.POLISHED_BLACKSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x0089, (byte) 0b1010);
@@ -789,33 +876,33 @@ public class BlockMap {
         register(Blocks.DAMAGED_ANVIL, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x0091, (byte) 0b1001);
         register(Blocks.DAMAGED_ANVIL, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST), (short) 0x0091, (byte) 0b1010);
         register(Blocks.DAMAGED_ANVIL, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x0091, (byte) 0b1011);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0000, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0001, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0010, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0011, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0100, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0101, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0110, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0111, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0000, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0001, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0010, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0011, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0100, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0101, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0110, (byte) 0b0111);
-        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0111, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0000, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0001, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0010, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0011, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0100, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0101, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0110, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, false), (short) 0x0095, (byte) 0b0111, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0000, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0001, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0010, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.COMPARE, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0011, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0100, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0101, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0110, (byte) 0b0111);
+        register(Blocks.COMPARATOR, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.MODE_COMPARATOR, ComparatorMode.SUBTRACT, BlockStateProperties.POWERED, true), (short) 0x0096, (byte) 0b0111, (byte) 0b0111);
         register(Blocks.REDSTONE_BLOCK, Map.of(), (short) 0x0098, (byte) 0b0000);
         register(Blocks.NETHER_QUARTZ_ORE, Map.of(), (short) 0x0099, (byte) 0b0000);
         register(Blocks.QUARTZ_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0000);
         register(Blocks.CHISELED_QUARTZ_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0001);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x009b, (byte) 0b0010);
+        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x009b, (byte) 0b0010);
         register(Blocks.SMOOTH_QUARTZ, Map.of(), (short) 0x009b, (byte) 0b0011);
         register(Blocks.DEAD_FIRE_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0100);
         register(Blocks.DEAD_BRAIN_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b0101);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x009b, (byte) 0b0110);
+//        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x009b, (byte) 0b0110);
         register(Blocks.DEAD_BUBBLE_CORAL_BLOCK, Map.of(), (short) 0x009b, (byte) 0b1001);
-        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x009b, (byte) 0b1010);
+//        register(Blocks.QUARTZ_PILLAR, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x009b, (byte) 0b1010);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0000);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0001);
         register(Blocks.QUARTZ_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x009c, (byte) 0b0010);
@@ -830,12 +917,12 @@ public class BlockMap {
         register(Blocks.JUNGLE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x009d, (byte) 0b0011, (byte) 0b0111);
         register(Blocks.ACACIA_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x009d, (byte) 0b0100, (byte) 0b0111);
         register(Blocks.DARK_OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x009d, (byte) 0b0101, (byte) 0b0111);
-        register(Blocks.OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0000);
-        register(Blocks.SPRUCE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0001);
-        register(Blocks.BIRCH_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0010);
-        register(Blocks.JUNGLE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0011);
-        register(Blocks.ACACIA_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0100);
-        register(Blocks.DARK_OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x009e, (byte) 0b0101);
+        register(Blocks.OAK_SLAB, Map.of(), (short) 0x009e, (byte) 0b0000);
+        register(Blocks.SPRUCE_SLAB, Map.of(), (short) 0x009e, (byte) 0b0001);
+        register(Blocks.BIRCH_SLAB, Map.of(), (short) 0x009e, (byte) 0b0010);
+        register(Blocks.JUNGLE_SLAB, Map.of(), (short) 0x009e, (byte) 0b0011);
+        register(Blocks.ACACIA_SLAB, Map.of(), (short) 0x009e, (byte) 0b0100);
+        register(Blocks.DARK_OAK_SLAB, Map.of(), (short) 0x009e, (byte) 0b0101);
         register(Blocks.OAK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x009e, (byte) 0b1000);
         register(Blocks.SPRUCE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x009e, (byte) 0b1001);
         register(Blocks.BIRCH_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x009e, (byte) 0b1010);
@@ -862,14 +949,14 @@ public class BlockMap {
         register(Blocks.DARK_OAK_LEAVES, Map.of(BlockStateProperties.PERSISTENT, false), (short) 0x00a1, (byte) 0b0001, (byte) 0b0111);
         register(Blocks.ACACIA_LEAVES, Map.of(BlockStateProperties.PERSISTENT, true), (short) 0x00a1, (byte) 0b0100, (byte) 0b0111);
         register(Blocks.DARK_OAK_LEAVES, Map.of(BlockStateProperties.PERSISTENT, true), (short) 0x00a1, (byte) 0b0101, (byte) 0b0111);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00a2, (byte) 0b0000);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00a2, (byte) 0b0001);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00a2, (byte) 0b0100);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00a2, (byte) 0b0101);
-        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00a2, (byte) 0b1000);
-        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00a2, (byte) 0b1001);
-        register(Blocks.ACACIA_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1100);
-        register(Blocks.DARK_OAK_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1101);
+        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00a2, (byte) 0b0000);
+        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00a2, (byte) 0b0001);
+//        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00a2, (byte) 0b0100);
+//        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00a2, (byte) 0b0101);
+//        register(Blocks.ACACIA_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00a2, (byte) 0b1000);
+//        register(Blocks.DARK_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00a2, (byte) 0b1001);
+//        register(Blocks.ACACIA_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1100);
+//        register(Blocks.DARK_OAK_WOOD, Map.of(), (short) 0x00a2, (byte) 0b1101);
         register(Blocks.ACACIA_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x00a3, (byte) 0b0000);
         register(Blocks.ACACIA_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x00a3, (byte) 0b0001);
         register(Blocks.ACACIA_STAIRS, Map.of(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH, BlockStateProperties.HALF, Half.BOTTOM), (short) 0x00a3, (byte) 0b0010);
@@ -902,9 +989,9 @@ public class BlockMap {
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x00a7, (byte) 0b1101);
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x00a7, (byte) 0b1110);
         register(Blocks.IRON_TRAPDOOR, Map.of(BlockStateProperties.OPEN, true, BlockStateProperties.HALF, Half.TOP, BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x00a7, (byte) 0b1111);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x00aa, (byte) 0b0000);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x00aa, (byte) 0b0100);
-        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x00aa, (byte) 0b1000);
+        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x00aa, (byte) 0b0000);
+//        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x00aa, (byte) 0b0100);
+//        register(Blocks.HAY_BLOCK, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x00aa, (byte) 0b1000);
         register(Blocks.WHITE_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0000);
         register(Blocks.ORANGE_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0001);
         register(Blocks.MAGENTA_CARPET, Map.of(), (short) 0x00ab, (byte) 0b0010);
@@ -956,14 +1043,16 @@ public class BlockMap {
         register(Blocks.MOSSY_COBBLESTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x00b5, (byte) 0b0101);
         register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x00b5, (byte) 0b0110);
         register(Blocks.RED_NETHER_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.DOUBLE), (short) 0x00b5, (byte) 0b0111);
-        register(Blocks.RED_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0000);
-        register(Blocks.PURPUR_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0001);
-        register(Blocks.PRISMARINE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0010);
-        register(Blocks.PRISMARINE_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0011);
-        register(Blocks.DARK_PRISMARINE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0100);
-        register(Blocks.MOSSY_COBBLESTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0101);
-        register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0110);
-        register(Blocks.RED_NETHER_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x00b6, (byte) 0b0111);
+        // Work
+        register(Blocks.RED_SANDSTONE_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0000);
+        register(Blocks.PURPUR_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0001);
+        // Pretty sure not working
+        register(Blocks.PRISMARINE_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0010);
+        register(Blocks.PRISMARINE_BRICK_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0011);
+        register(Blocks.DARK_PRISMARINE_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0100);
+        register(Blocks.MOSSY_COBBLESTONE_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0101);
+        register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0110);
+        register(Blocks.RED_NETHER_BRICK_SLAB, Map.of(), (short) 0x00b6, (byte) 0b0111);
         register(Blocks.RED_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1000);
         register(Blocks.PURPUR_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1001);
         register(Blocks.PRISMARINE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1010);
@@ -972,6 +1061,8 @@ public class BlockMap {
         register(Blocks.MOSSY_COBBLESTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1101);
         register(Blocks.SMOOTH_SANDSTONE_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1110);
         register(Blocks.RED_NETHER_BRICK_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.TOP), (short) 0x00b6, (byte) 0b1111);
+
+
         register(Blocks.SPRUCE_FENCE_GATE, Map.of(BlockStateProperties.IN_WALL, false, BlockStateProperties.OPEN, false, BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH), (short) 0x00b7, (byte) 0b0000);
         register(Blocks.SPRUCE_FENCE_GATE, Map.of(BlockStateProperties.IN_WALL, false, BlockStateProperties.OPEN, false, BlockStateProperties.HORIZONTAL_FACING, Direction.WEST), (short) 0x00b7, (byte) 0b0001);
         register(Blocks.SPRUCE_FENCE_GATE, Map.of(BlockStateProperties.IN_WALL, false, BlockStateProperties.OPEN, false, BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH), (short) 0x00b7, (byte) 0b0010);
@@ -1093,7 +1184,7 @@ public class BlockMap {
         register(Blocks.OBSERVER, Map.of(BlockStateProperties.FACING, Direction.WEST, BlockStateProperties.POWERED, true), (short) 0x00fb, (byte) 0b1100);
         register(Blocks.OBSERVER, Map.of(BlockStateProperties.FACING, Direction.EAST, BlockStateProperties.POWERED, true), (short) 0x00fb, (byte) 0b1101);
 
-        // 2 bytes
+        // 2 byte ids
         register(Blocks.WARPED_PLANKS, Map.of(), (short) 0x010c, (byte) 0b0000);
         register(Blocks.CRIMSON_NYLIUM, Map.of(), (short) 0x010d, (byte) 0b0000);
         register(Blocks.WARPED_NYLIUM, Map.of(), (short) 0x010e, (byte) 0b0000);
@@ -1102,18 +1193,18 @@ public class BlockMap {
         register(Blocks.WARPED_WART_BLOCK, Map.of(), (short) 0x0112, (byte) 0b0000);
         register(Blocks.CRIMSON_PLANKS, Map.of(), (short) 0x0114, (byte) 0b0000);
         register(Blocks.QUARTZ_BRICKS, Map.of(), (short) 0x0130, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0131, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0132, (byte) 0b0000);
-        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0133, (byte) 0b0000);
+        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0131, (byte) 0b0000);
+//        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0132, (byte) 0b0000);
+//        register(Blocks.BASALT, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0133, (byte) 0b0000);
         register(Blocks.CRYING_OBSIDIAN, Map.of(), (short) 0x015b, (byte) 0b0000);
         register(Blocks.DRIED_KELP_BLOCK, Map.of(), (short) 0x015c, (byte) 0b0000);
         register(Blocks.NETHER_GOLD_ORE, Map.of(), (short) 0x015d, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0162, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x0163, (byte) 0b0000);
-        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x0164, (byte) 0b0000);
-        register(Blocks.CRIMSON_STEM, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x0165, (byte) 0b0000);
-        register(Blocks.CRIMSON_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0207, (byte) 0b0000);
-        register(Blocks.WARPED_SLAB, Map.of(BlockStateProperties.SLAB_TYPE, SlabType.BOTTOM), (short) 0x0208, (byte) 0b0000);
+        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0162, (byte) 0b0000);
+//        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x0163, (byte) 0b0000);
+//        register(Blocks.POLISHED_BASALT, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x0164, (byte) 0b0000);
+        register(Blocks.CRIMSON_STEM, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x0165, (byte) 0b0000);
+        register(Blocks.CRIMSON_SLAB, Map.of(), (short) 0x0207, (byte) 0b0000);
+        register(Blocks.WARPED_SLAB, Map.of(), (short) 0x0208, (byte) 0b0000);
         register(Blocks.SEA_LANTERN, Map.of(), (short) 0x010b, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 1), (short) 0x0168, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 2), (short) 0x0158, (byte) 0b0000);
@@ -1131,8 +1222,8 @@ public class BlockMap {
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 14), (short) 0x0156, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 15), (short) 0x0161, (byte) 0b0000);
         register(Blocks.NOTE_BLOCK, Map.of(BlockStateProperties.NOTEBLOCK_INSTRUMENT, NoteBlockInstrument.HARP, BlockStateProperties.NOTE, 16), (short) 0x015f, (byte) 0b0000);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Y), (short) 0x01ea, (byte) 0b0000);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.X), (short) 0x01ea, (byte) 0b0100);
-        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Direction.Axis.Z), (short) 0x01ea, (byte) 0b1000);
+        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Y), (short) 0x01ea, (byte) 0b0000);
+//        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.X), (short) 0x01ea, (byte) 0b0100);
+//        register(Blocks.STRIPPED_OAK_LOG, Map.of(BlockStateProperties.AXIS, Axis.Z), (short) 0x01ea, (byte) 0b1000);
     }
 }

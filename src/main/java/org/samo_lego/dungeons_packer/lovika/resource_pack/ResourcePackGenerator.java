@@ -4,12 +4,18 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockConstants;
+import org.samo_lego.dungeons_packer.lovika.block_conversion.BlockMap;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.json.ResourcesJson;
+import org.samo_lego.dungeons_packer.lovika.resource_pack.json.TerrainTextureJson;
 import org.samo_lego.dungeons_packer.lovika.tiles.DungeonsHandler;
 import org.samo_lego.japak.PakBuilder;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -31,10 +37,20 @@ public class ResourcePackGenerator {
 
         // This will be for our blocks.json
         var resourceId2texturePath = new TreeMap<String, BlocksJsonTextureEntry>();
-        // Add air
-        resourceId2texturePath.put("air", BlocksJsonTextureEntry.blockshapeOnly(BlockShape.INVISIBLE));
 
-        for (var entry : usedTextures.entrySet()) {
+        // Add air
+        resourceId2texturePath.put(
+                BlockConstants.getResourceStringId(BlockMap.DUNGEONS_AIR).orElse("air"),
+                BlocksJsonTextureEntry.blockshapeOnly(BlockShape.INVISIBLE)
+        );
+
+        var blockstate2texture = usedTextures.entrySet().stream()
+                .sorted((Map.Entry.comparingByValue(Comparator.comparingInt(TextureEntry::blockId))))
+                .toList();
+
+        var debugBlocks = new ArrayList<String>();
+
+        for (var entry : blockstate2texture) {
             var blockState = entry.getKey();
             int blockstateId = Block.getId(blockState);
             var textureEntry = entry.getValue();
@@ -42,8 +58,8 @@ public class ResourcePackGenerator {
 
             var blockTextures = textures.get(blockState);
             if (blockTextures != null) {
-                for (var identifier : blockTextures.bytes().keySet()) {
-                    var bytes = blockTextures.bytes().get(identifier);
+                for (var identifier : blockTextures.textureId2bytes().keySet()) {
+                    var bytes = blockTextures.textureId2bytes().get(identifier);
                     if (bytes != null) {
                         String fileName = identifier.getPath().substring(identifier.getPath().indexOf("/") + 1).replace('/', '_') + "_" + blockstateId;
                         String path = BLOCKS_LOCATION.replace("{}", fileName + ".png");
@@ -53,18 +69,32 @@ public class ResourcePackGenerator {
                         var blockShape = BlockShape.fromBlockState(blockState, level);
                         resourceId2texturePath.computeIfAbsent(resourceId, _ -> new BlocksJsonTextureEntry());
 
-                        if (blockShape != null) {
+                        if (blockShape != BlockShape.FULL_BLOCK) {
                             resourceId2texturePath.get(resourceId).blockshape = blockShape;
                         }
 
-                        Arrays.stream(Direction.values())
-                                .filter(dir -> identifier.equals(blockTextures.sideMappings().get(dir)))
-                                .forEach(dir -> resourceId2texturePath.get(resourceId).put(dir, fileName));
+                        var directions = Arrays.stream(Direction.values())
+                                .filter(dir -> identifier.equals(blockTextures.direction2textureId().get(dir))).toList();
 
-                        // Put into terrain texture
-                        var resourceName = "block." + fileName;
-                        terrainTexture.addTexture(fileName, resourceName);
-                        resources.addTexture(resourceName, "images/blocks/" + fileName + ".png");
+                        if (!directions.isEmpty()) {
+                            directions.forEach(dir -> {
+                                var name = resourceId + "_" + dir.getName();
+                                resourceId2texturePath.get(resourceId).put(dir, name);
+
+                                // Put into terrain texture
+                                var resourceName = "block." + fileName;
+                                terrainTexture.addTexture(name, resourceName, textureEntry.blockData());
+                                resources.addTexture(resourceName, "images/blocks/" + fileName + ".png");
+                            });
+
+                            debugBlocks.add("%s (id: %s, data %s) -> %s, directions: %s".formatted(
+                                    resourceId,
+                                    String.format("0x%04X", textureEntry.blockId()),
+                                    Integer.toBinaryString(textureEntry.blockData()),
+                                    fileName,
+                                    directions.stream().map(Direction::name).toList()
+                            ));
+                        }
                     }
                 }
             }
@@ -77,6 +107,8 @@ public class ResourcePackGenerator {
 
         var resourcesJson = DungeonsHandler.GSON.toJson(resources);
         builder.addFile(RESOURCES_JSON, resourcesJson.getBytes());
+
+        builder.addFile("Dungeons/Content/data/resourcepacks/%s/debug.txt".formatted(PACK_NAME), DungeonsHandler.GSON.toJson(debugBlocks).getBytes());
     }
 
     private static class BlocksJsonTextureEntry {
