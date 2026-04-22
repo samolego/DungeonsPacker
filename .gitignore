@@ -39,4 +39,10 @@ replay_*.log
 *.hprof
 *.jfr
 
-UE4Project
+UE4Project/Intermediate
+UE4Project/Build
+UE4Project/Content/Developers
+UE4Project/Content/Collections
+UE4Project/Saved
+
+extraction
